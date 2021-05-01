@@ -22,7 +22,7 @@
     "lint:tsc-src": "tsc --noEmit",
     "prepack": "npm run docs",
     "prepare": "tsc && rollup -c rollup.config.js",
-    "test": "npm-run-all lint jest",
+    "test": "npm-run-all prepare lint jest",
     "jest": "jest"
   },
   "devDependencies": {

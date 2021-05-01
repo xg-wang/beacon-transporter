@@ -2,8 +2,18 @@ const supportFetch = typeof self !== 'undefined' && 'fetch' in self;
 
 const supportSendBeacon =
   typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
-
 const supportKeepaliveFetch = supportFetch && 'keepalive' in new Request('');
+
+const defaultInMemoryRetryStatusCodes = [502, 504];
+
+interface NetworkRetryRejection {
+  type: 'network';
+}
+interface ResponseRetryRejection {
+  type: 'response';
+  statusCode: number;
+}
+type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 function createRequestInit({
   body,
@@ -24,17 +34,17 @@ function createRequestInit({
 
 class BeaconTransporter {
   constructor(url: string, body: string, private config?: BeaconConfig) {
-    const retryCount = config?.retryCount ?? 0;
+    const retryCountLeft = config?.retry?.limit ?? 0;
 
     if (supportKeepaliveFetch) {
       this.retry(
         () => this.keepaliveFetch(url, body),
-        retryCount
+        retryCountLeft
       ).catch((reason) => console.error(reason));
     } else {
       this.retry(
         () => this.fallbackFetch(url, body),
-        retryCount
+        retryCountLeft
       ).catch((reason) => console.error(reason));
     }
   }
@@ -47,8 +57,14 @@ class BeaconTransporter {
           return fetch(url, createRequestInit({ body, keepalive: false }));
         })
         .then(
-          (response) => resolve(response),
-          (reason) => reject(reason)
+          (response) => {
+            if (response.ok) {
+              resolve(response);
+            } else {
+              reject({ type: 'response', statusCode: response.status });
+            }
+          },
+          () => reject({ type: 'network' })
         );
     });
   }
@@ -58,9 +74,6 @@ class BeaconTransporter {
       if (supportSendBeacon) {
         let result = false;
         try {
-          if (this.config?.debug) {
-            console.log(`[beacon-transporter] sendBeacon`);
-          }
           result = navigator.sendBeacon(url, body);
         } catch (_e) {
           // silent any error due to any browser issue
@@ -68,19 +81,21 @@ class BeaconTransporter {
         // if the user agent is not able to successfully queue the data for transfer,
         // send the payload with fetch api instead
         if (result) {
-          if (this.config?.debug) {
-            console.log(`[beacon-transporter] sendBeacon => true`);
-          }
+          this.debug('sendBeacon => true');
           resolve(null);
           return;
         }
       }
-      if (this.config?.debug) {
-        console.log(`[beacon-transporter] sendBeacon => fetch`);
-      }
+      this.debug('sendBeacon => fetch');
       fetch(url, createRequestInit({ body, keepalive: false })).then(
-        (response) => resolve(response),
-        (reason) => reject(reason)
+        (response) => {
+          if (response.ok) {
+            resolve(response);
+          } else {
+            reject({ type: 'response', statusCode: response.status });
+          }
+        },
+        () => reject({ type: 'network' })
       );
     });
   }
@@ -91,28 +106,47 @@ class BeaconTransporter {
    * @param fn - The function to retry, should return a promise that rejects with error as retry instruction or resolves if finished
    * @returns result of the retry operation, true if fn ever resolved during retry, false if all retry failed
    */
-  private retry(fn: () => Promise<unknown>, retryCount: number): Promise<true> {
-    if (this.config?.debug) {
-      console.log(`[beacon-transporter] retry ${retryCount}`);
-    }
+  private retry(
+    fn: () => Promise<unknown>,
+    retryCountLeft: number
+  ): Promise<true> {
+    this.debug(`retry ${retryCountLeft}`);
     return fn()
-      .catch((error) => {
-        if (retryCount > 0 && this.isRetryableError(error)) {
-          return this.retry(fn, retryCount - 1);
+      .catch((error: RetryRejection) => {
+        this.debug(JSON.stringify(error))
+        if (retryCountLeft > 0 && this.isRetryableError(error)) {
+          return this.retry(fn, retryCountLeft - 1);
         }
         throw error;
       })
       .then(() => true);
   }
 
-  private isRetryableError(_error: any): boolean {
+  private isRetryableError(error: RetryRejection): boolean {
+    if (
+      error.type === 'response' &&
+      !(
+        this.config?.retry?.statusCodes ?? defaultInMemoryRetryStatusCodes
+      ).includes(error.statusCode)
+    ) {
+      return false;
+    }
     return true;
+  }
+
+  protected debug(message: string): void {
+    if (this.config?.debug) {
+      console.log(`[beacon] ${message}`);
+    }
   }
 }
 
 export interface BeaconConfig {
   debug?: boolean;
-  retryCount: number;
+  retry?: {
+    limit: number;
+    statusCodes: number[];
+  };
 }
 
 const createBeaconInstance = () => {

@@ -1,8 +1,8 @@
-import * as createTestServer from 'create-test-server';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as playwright from 'playwright';
-import { Browser, BrowserType, Page } from 'playwright';
+import createTestServer from 'create-test-server';
+import fs from 'fs';
+import path from 'path';
+import type { Browser, BrowserType, Page } from 'playwright';
+import playwright from 'playwright';
 
 function defer(): [Promise<unknown>, (value: unknown) => void] {
   let resolver: (value: unknown) => void;
@@ -182,12 +182,52 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       // });
       await page.evaluate(
         ([url]) => {
-          return (<any>window).beacon(`${url}/api`, 'hi', { retryCount: 3 });
+          return (<any>window).beacon(`${url}/api`, 'hi', {
+            retry: { limit: 3 },
+          });
         },
         [server.url]
       );
       await page.waitForTimeout(5000);
       expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (3 + 1) * 2);
+    });
+
+    it('retry on server response statusCode', async () => {
+      const requests1 = [];
+      const requests2 = [];
+      server.get('/', (request, response) => {
+        response.end('hi');
+      });
+      server.post('/api/retry', (request, response) => {
+        requests1.push(request.body);
+        response.sendStatus(502);
+      });
+      server.post('/api/noretry', (request, response) => {
+        requests2.push(request.body);
+        response.sendStatus(503);
+      });
+      await page.goto(server.url);
+      await page.addScriptTag(script);
+      // page.on('console', async (msg) => {
+      //   for (let i = 0; i < msg.args().length; ++i)
+      //     console.log(`${i}: ${await msg.args()[i].jsonValue()}`);
+      // });
+      await page.evaluate(
+        ([url]) => {
+          (<any>window).beacon(`${url}/api/retry`, 'hi', {
+            // debug: true,
+            retry: { limit: 3, statusCodes: [502] },
+          });
+          (<any>window).beacon(`${url}/api/noretry`, 'hi', {
+            // debug: true,
+            retry: { limit: 3 },
+          });
+        },
+        [server.url]
+      );
+      await page.waitForTimeout(5000);
+      expect(requests1.length).toBe(name === 'firefox' ? 1 : (3 + 1));
+      expect(requests2.length).toBe(name === 'firefox' ? 1 : 1);
     });
   }
 );
