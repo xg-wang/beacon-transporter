@@ -99,7 +99,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       expect(results[0].length).toEqual(64_100);
     });
 
-    if (name !== 'webkit') {
+    if (
+      name !== 'webkit' &&
+      !(process.platform === 'linux' && name === 'chromium') &&
+      !(process.platform === 'win32' && name === 'chromium')
+    ) {
       // see https://bugs.webkit.org/show_bug.cgi?id=194897
       // navigator.sendBeacon does not work on visibilitychange callback for document unload
       // Possibly also playwright bug beforeunload / pagehide aren't firing
@@ -155,7 +159,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       );
       await Promise.all([page.close({ runBeforeUnload: true })]);
 
-      expect(results.length).toBeLessThan(2);
+      expect(results.length).toBeLessThanOrEqual(1);
     });
 
     it('if not firefox, retry configured times before giving up', async () => {
