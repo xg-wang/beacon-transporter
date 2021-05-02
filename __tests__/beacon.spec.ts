@@ -1,7 +1,7 @@
 import createTestServer from 'create-test-server';
 import fs from 'fs';
 import path from 'path';
-import type { Browser, BrowserType, Page } from 'playwright';
+import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
 function defer(): [Promise<unknown>, (value: unknown) => void] {
@@ -23,6 +23,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
   (name) => {
     const browserType: BrowserType<Browser> = playwright[name];
     let browser: Browser;
+    let context: BrowserContext;
     let page: Page;
     let server: any;
 
@@ -43,12 +44,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     beforeEach(async () => {
-      page = await browser.newPage();
+      context = await browser.newContext({ ignoreHTTPSErrors: true })
+      page = await context.newPage();
       server = await createTestServer();
     });
 
     afterEach(async () => {
-      await page.close();
+      await context.close();
       await server.close();
     });
 
@@ -63,13 +65,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         serverResolver(null);
         response.end('hello');
       });
-      await page.goto(server.url);
+      await page.goto(server.sslUrl);
       await page.addScriptTag(script);
       const [, result] = await Promise.all([
         serverPromise,
         page.evaluate((url) => {
           return (<any>window).beacon(`${url}/api`, 'hello');
-        }, server.url),
+        }, server.sslUrl),
       ]);
 
       expect(result).toBeUndefined;
@@ -87,13 +89,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         serverResolver(null);
         response.end('hello');
       });
-      await page.goto(server.url);
+      await page.goto(server.sslUrl);
       await page.addScriptTag(script);
       await Promise.all([
         serverPromise,
         page.evaluate((url) => {
           return (<any>window).beacon(`${url}/api`, 's'.repeat(64_100));
-        }, server.url),
+        }, server.sslUrl),
       ]);
 
       expect(results[0].length).toEqual(64_100);
@@ -119,15 +121,15 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           serverResolver(null);
           response.end('hello');
         });
-        await page.goto(server.url);
+        await page.goto(server.sslUrl);
         await page.addScriptTag(script);
         await page.evaluate(
           ([url, eventName]) => {
             document.addEventListener(eventName, function () {
-              return (<any>window).beacon(`${url}/api`, 'closing');
+              (<any>window).beacon(`${url}/api`, 'closing');
             });
           },
-          [server.url, getCloseTabEvent(name)]
+          [server.sslUrl, getCloseTabEvent(name)]
         );
         await Promise.all([
           serverPromise,
@@ -147,17 +149,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         results.push(request.body);
         response.end('hello');
       });
-      await page.goto(server.url);
+      await page.goto(server.sslUrl);
       await page.addScriptTag(script);
       await page.evaluate(
         ([url, eventName]) => {
           document.addEventListener(eventName, function () {
-            return (<any>window).beacon(`${url}/api`, 's'.repeat(64_100));
+            (<any>window).beacon(`${url}/api`, 's'.repeat(64_100));
           });
         },
-        [server.url, getCloseTabEvent(name)]
+        [server.sslUrl, getCloseTabEvent(name)]
       );
-      await Promise.all([page.close({ runBeforeUnload: true })]);
+      await page.close({ runBeforeUnload: true });
 
       expect(results.length).toBeLessThanOrEqual(1);
     });
@@ -169,7 +171,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       server.post('/api', (request, response) => {
         response.end('hello');
       });
-      await page.goto(server.url);
+      await page.goto(server.sslUrl);
       await page.addScriptTag(script);
       let numberOfRetries = 0;
       await page.route('**/api', (route) => {
@@ -186,7 +188,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
             retry: { limit: 3 },
           });
         },
-        [server.url]
+        [server.sslUrl]
       );
       await page.waitForTimeout(5000);
       expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (3 + 1) * 2);
@@ -206,7 +208,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         requests2.push(request.body);
         response.sendStatus(503);
       });
-      await page.goto(server.url);
+      await page.goto(server.sslUrl);
       await page.addScriptTag(script);
       // page.on('console', async (msg) => {
       //   for (let i = 0; i < msg.args().length; ++i)
@@ -223,7 +225,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
             retry: { limit: 3 },
           });
         },
-        [server.url]
+        [server.sslUrl]
       );
       await page.waitForTimeout(5000);
       expect(requests1.length).toBe(name === 'firefox' ? 1 : (3 + 1));
@@ -234,6 +236,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
 function getCloseTabEvent(
   browserName: string
-): 'beforeunload' | 'visibilitychange' {
-  return browserName === 'webkit' ? 'beforeunload' : 'visibilitychange';
+): 'pagehide' | 'visibilitychange' {
+  return browserName === 'webkit' ? 'pagehide' : 'visibilitychange';
 }
