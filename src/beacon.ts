@@ -26,7 +26,7 @@ function createRequestInit({
     body,
     keepalive,
     credentials: 'same-origin',
-    headers: [['content-type', 'text/plain']],
+    headers: [['content-type', 'text/plain;charset=UTF-8']],
     method: 'POST',
     mode: 'cors',
   };
@@ -113,13 +113,20 @@ class BeaconTransporter {
     this.debug(`retry ${retryCountLeft}`);
     return fn()
       .catch((error: RetryRejection) => {
-        this.debug(JSON.stringify(error))
+        this.debug(JSON.stringify(error));
         if (retryCountLeft > 0 && this.isRetryableError(error)) {
-          return this.retry(fn, retryCountLeft - 1);
+          return sleep(this.getRetryDelay(retryCountLeft)).then(() =>
+            this.retry(fn, retryCountLeft - 1)
+          );
         }
         throw error;
       })
       .then(() => true);
+  }
+
+  private getRetryDelay(countLeft: number): number {
+    const count = (this.config?.retry?.limit ?? 0) - countLeft + 1;
+    return count * 2000;
   }
 
   private isRetryableError(error: RetryRejection): boolean {
@@ -141,11 +148,16 @@ class BeaconTransporter {
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export interface BeaconConfig {
   debug?: boolean;
   retry?: {
     limit: number;
     statusCodes: number[];
+    persist: boolean;
   };
 }
 
