@@ -4,3 +4,4 @@
  */
 
 export { default } from './beacon';
+export * from './interfaces';
