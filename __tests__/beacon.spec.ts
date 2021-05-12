@@ -14,7 +14,7 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
-globalThis.beacon = beacon;
+self.beacon = beacon;
 `,
 };
 

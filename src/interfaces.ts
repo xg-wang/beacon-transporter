@@ -5,11 +5,13 @@ export interface BeaconConfig {
     inMemoryRetryStatusCodes?: number[];
     persist: boolean;
     persistRetryStatusCodes?: number[];
+    headerPath?: string;
   };
 }
 
 export interface NetworkRetryRejection {
   type: 'network';
+  statusCode: undefined;
   url: string;
   body: string;
 }
