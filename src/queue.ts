@@ -53,16 +53,14 @@ export function setRetryQueueConfig(config: RetryQueueConfig): void {
 }
 
 function throttle(fn: () => void, timeFrame: number) {
-  let waiting = false;
+  let lastTime = 0;
   return function () {
-    if (!waiting) {
-      debug('throttle fn() start waiting');
+    const now = Date.now();
+    debug('[throttle] Skip fn()');
+    if (now - lastTime > timeFrame) {
+      debug('[throttle] Run fn()');
       fn();
-      waiting = true;
-      setTimeout(function () {
-        debug('throttle fn() stop waiting');
-        waiting = false;
-      }, timeFrame);
+      lastTime = now;
     }
   };
 }
