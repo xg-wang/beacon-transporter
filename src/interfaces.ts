@@ -3,7 +3,7 @@ export interface BeaconConfig {
   retry?: {
     limit: number;
     inMemoryRetryStatusCodes?: number[];
-    persist: boolean;
+    persist?: boolean;
     persistRetryStatusCodes?: number[];
     headerPath?: string;
   };

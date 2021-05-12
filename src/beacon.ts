@@ -1,7 +1,7 @@
+import fetchFn, { supportFetch } from './fetch-fn';
 import { BeaconConfig, RetryRejection } from './interfaces';
-import { debug, sleep } from './utils';
-import { pushToQueue, notifyQueue } from './queue';
-import fetchFn, { supportFetch } from './fetch';
+import { notifyQueue, pushToQueue } from './queue';
+import { debug, logError, sleep } from './utils';
 
 /**
  * 502 Bad Gateway
@@ -23,8 +23,8 @@ class Beacon {
   ) {
     this.timestamp = Date.now();
     const retryCountLeft = config?.retry?.limit ?? 0;
-    this.retry(() => fetchFn(url, body), retryCountLeft).catch((reason) =>
-      console.error(reason)
+    this.retry(() => fetchFn(url, body, {}), retryCountLeft).catch((reason) =>
+      logError(JSON.stringify(reason))
     );
   }
 
@@ -41,8 +41,9 @@ class Beacon {
     debug(`retry ${retryCountLeft}`);
     return fn()
       .catch((error: RetryRejection) => {
-        debug(JSON.stringify(error));
+        debug('retry rejected', JSON.stringify(error));
         if (this.shouldPersist(error)) {
+          debug('push entry to db');
           pushToQueue({
             url: this.url,
             body: this.body,
@@ -50,6 +51,7 @@ class Beacon {
             timestamp: this.timestamp,
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(error)) {
+          debug('in memory retry');
           return sleep(this.getRetryDelay(retryCountLeft)).then(() =>
             this.retry(fn, retryCountLeft - 1)
           );

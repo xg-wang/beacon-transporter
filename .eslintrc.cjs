@@ -16,6 +16,7 @@ module.exports = {
   rules: {
     'sort-imports': 'off',
     'import/order': 'off',
+    'import/no-unresolved': 'off',
     'import/no-extraneous-dependencies': 'error',
     'import/no-unassigned-import': 'error', 'import/no-duplicates': 'error',
     '@typescript-eslint/no-use-before-define': ['error', { functions: false }],
@@ -39,7 +40,6 @@ module.exports = {
         'plugin:@typescript-eslint/recommended-requiring-type-checking',
       ],
       rules: {
-        'import/no-unresolved': 'off',
         'filenames/match-regex': ['error', '^[a-z0-9\\-]+$', true],
         'filenames/match-exported': ['error', 'kebab'],
       },

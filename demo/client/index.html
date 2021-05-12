@@ -9,16 +9,24 @@
   }
 </script>
 <script id="code" type="module">
-  import beacon, { setRetryHeaderPath } from '/dist/index.js';
+  import beacon, {
+    setRetryHeaderPath,
+    setRetryQueueConfig,
+  } from '/dist/index.js';
 
   self.__DEBUG_BEACON_TRANSPORTER = true;
 
   setRetryHeaderPath('x-retry-context');
+  setRetryQueueConfig({
+    attemptLimit: 1,
+    maxNumber: 10,
+    batchEvictionNumber: 3,
+    throttleWait: 2000,
+  });
 
   ['200', '502', '429'].forEach((status) =>
     $(status).addEventListener('click', () =>
       beacon(`/api/${status}`, 'hello', {
-        debug: true,
         retry: { limit: 3, persist: true },
       })
     )

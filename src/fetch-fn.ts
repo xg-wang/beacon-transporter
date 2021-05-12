@@ -1,4 +1,4 @@
-import { createRequestInit } from './utils';
+import { createRequestInit, debug } from './utils';
 
 export const supportFetch = typeof self !== 'undefined' && 'fetch' in self;
 
@@ -8,12 +8,21 @@ export const supportKeepaliveFetch =
 const supportSendBeacon =
   typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
 
-function keepaliveFetch(url: string, body: string, headers?: HeadersInit): Promise<Response> {
+function keepaliveFetch(
+  url: string,
+  body: string,
+  headers: HeadersInit
+): Promise<Response> {
+  debug('use keep alive fetch');
   return new Promise((resolve, reject) => {
     fetch(url, createRequestInit({ body, keepalive: true, headers }))
       .catch(() => {
+        debug('fallback to keep alive false');
         // keepalive true fetch can throw error if body exceeds 64kb
-        return fetch(url, createRequestInit({ body, keepalive: false, headers }));
+        return fetch(
+          url,
+          createRequestInit({ body, keepalive: false, headers })
+        );
       })
       .then(
         (response) => {
@@ -28,7 +37,13 @@ function keepaliveFetch(url: string, body: string, headers?: HeadersInit): Promi
   });
 }
 
-function fallbackFetch(url: string, body: string, headers?: HeadersInit): Promise<Response | null> {
+function fallbackFetch(
+  url: string,
+  body: string,
+  headers: HeadersInit
+): Promise<Response | null> {
+  debug('use sendBeacon');
+
   return new Promise((resolve, reject) => {
     if (supportSendBeacon) {
       let result = false;
