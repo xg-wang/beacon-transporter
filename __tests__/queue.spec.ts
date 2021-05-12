@@ -127,7 +127,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     }
 
     if (browserName !== 'firefox') {
-      it('retry with reading IDB is throttled with every successful response', async () => { const [serverPromise, resolver] = defer();
+      it('retry with reading IDB is throttled with every successful response', async () => {
+        const [serverPromise, resolver] = defer();
         const results = [];
         let serverCount = 0;
         server.post('/api/:status', ({ params, body, headers }, res) => {
@@ -158,16 +159,19 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
                 retry: { limit: 0, persist: true },
               });
             }, 500);
+            // waiting, will not trigger retry
             setTimeout(() => {
               window.beacon(`${url}/api/200`, 'hi', {
                 retry: { limit: 0, persist: true },
               });
             }, 1000);
+            // throttling finished, will trigger retry
+            // 500 + 2000 (throttle wait) + grace period
             setTimeout(() => {
               window.beacon(`${url}/api/200`, 'hi', {
                 retry: { limit: 0, persist: true },
               });
-            }, 2600); // 500 + 2000 (throttle wait) + grace period
+            }, 2600);
           },
           [server.sslUrl]
         );
