@@ -32,7 +32,9 @@ self.setRetryQueueConfig = setRetryQueueConfig;
 `,
 };
 
-describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
+// FireFox doesn't cap sendBeacon / keepalive fetch string limit
+// https://github.com/xg-wang/fetch-keepalive
+describe.each(['chromium', 'webkit'].map((t) => [t]))(
   '[%s] beacon persistence',
   (browserName) => {
     const browserType: BrowserType<Browser> = playwright[browserName];
@@ -78,123 +80,579 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await server.close();
     });
 
-    if (browserName !== 'firefox') {
-      it('stores beacon data if network having issue, retry on next successful response', async () => {
-        const [serverPromise, resolver] = defer();
-        const results = [];
-        let serverCount = 0;
-        server.post('/api/:status', ({ params, body, headers }, res) => {
-          const status = +params.status;
-          const payload = { body, header: headers['x-retry-context'] };
-          results.push(payload);
-          console.log(`Received ${++serverCount} request`, payload);
-          if (serverCount === 2) {
-            resolver(null);
-          }
-          res.status(status).send(`Status: ${status}`);
-        });
+    it('stores beacon data if network having issue, retry on next successful response', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 2) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
 
-        let numberOfBeacons = 0;
-        await page.route('**/api/*', (route) => {
-          // fetch will fallback to keepalive false and try 2nd time
-          if (++numberOfBeacons >= 3) {
-            console.log('Continue route request');
-            return route.continue();
-          } else {
-            console.log('Abort route request');
-            return route.abort();
-          }
-        });
-        await page.evaluate(
-          ([url]) => {
-            window.setRetryHeaderPath('x-retry-context');
+      let numberOfBeacons = 0;
+      await page.route('**/api/*', (route) => {
+        // fetch will fallback to keepalive false and try 2nd time
+        if (++numberOfBeacons >= 3) {
+          console.log('Continue route request');
+          return route.continue();
+        } else {
+          console.log('Abort route request');
+          return route.abort();
+        }
+      });
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.beacon(`${url}/api/200`, 'hi', {
+            retry: { limit: 0, persist: true },
+          });
+          setTimeout(() => {
             window.beacon(`${url}/api/200`, 'hi', {
               retry: { limit: 0, persist: true },
             });
-            setTimeout(() => {
-              window.beacon(`${url}/api/200`, 'hi', {
-                retry: { limit: 0, persist: true },
-              });
-            }, 1000);
-          },
-          [server.sslUrl]
-        );
-        await serverPromise;
-        expect(numberOfBeacons).toBe(4);
-        expect(results.length).toBe(2);
-        expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
+          }, 1000);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      expect(numberOfBeacons).toBe(4);
+      expect(results.length).toBe(2);
+      expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
+    });
+
+    it('[payload>64kb] stores beacon data if network having issue, retry on next successful response', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 2) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
       });
-    }
 
-    if (browserName !== 'firefox') {
-      it('retry with reading IDB is throttled with every successful response', async () => {
-        const [serverPromise, resolver] = defer();
-        const results = [];
-        let serverCount = 0;
-        server.post('/api/:status', ({ params, body, headers }, res) => {
-          const status = +params.status;
-          const payload = { body, status, header: headers['x-retry-context'] };
-          results.push(payload);
-          console.log(`Received ${++serverCount} request`, payload);
-          if (serverCount === 6) {
-            resolver(null);
-          }
-          res.status(status).send(`Status: ${status}`);
-        });
-
-        await page.evaluate(
-          ([url]) => {
-            window.setRetryHeaderPath('x-retry-context');
-            window.setRetryQueueConfig({
-              attemptLimit: 1,
-              maxNumber: 10,
-              batchEvictionNumber: 3,
-              throttleWait: 2000,
-            });
-            window.beacon(`${url}/api/429`, 'hi', {
+      let numberOfBeacons = 0;
+      await page.route('**/api/*', (route) => {
+        if (++numberOfBeacons >= 3) {
+          console.log('Continue route request');
+          return route.continue();
+        } else {
+          console.log('Abort route request');
+          return route.abort();
+        }
+      });
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.beacon(`${url}/api/200`, 's'.repeat(65_000), {
+            retry: { limit: 0, persist: true },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 's'.repeat(65_000), {
               retry: { limit: 0, persist: true },
             });
-            setTimeout(() => {
-              window.beacon(`${url}/api/200`, 'hi', {
-                retry: { limit: 0, persist: true },
-              });
-            }, 500);
-            // waiting, will not trigger retry
-            setTimeout(() => {
-              window.beacon(`${url}/api/200`, 'hi', {
-                retry: { limit: 0, persist: true },
-              });
-            }, 1000);
-            // throttling finished, will trigger retry
-            // 500 + 2000 (throttle wait) + grace period
-            setTimeout(() => {
-              window.beacon(`${url}/api/200`, 'hi', {
-                retry: { limit: 0, persist: true },
-              });
-            }, 2600);
-          },
-          [server.sslUrl]
-        );
-        await serverPromise;
-        expect(results.length).toBe(6);
-        expect(results[0].status).toBe(429);
-        expect(results[0].header).toBeUndefined;
-        expect(results[1].status).toBe(200);
-        expect(results[2].header).toEqual(
-          JSON.stringify({ attempt: 0, errorCode: 429 })
-        );
-        expect(results[5].header).toEqual(
-          JSON.stringify({ attempt: 1, errorCode: 429 })
-        );
+          }, 1000);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      expect(numberOfBeacons).toBe(4);
+      expect(results.length).toBe(2);
+      expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
+    });
+
+    it('retry with reading IDB is throttled with every successful response', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 6) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
       });
-    }
 
-    // it('in memory retry statusCode response will not retry', async () => {});
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 2000,
+          });
+          window.beacon(`${url}/api/429`, 'hi', {
+            retry: { limit: 0, persist: true },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 500);
+          // waiting, will not trigger retry
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 1000);
+          // throttling finished, will trigger retry
+          // 500 + 2000 (throttle wait) + grace period
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2600);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      expect(results.length).toBe(6);
+      expect(results[0].status).toBe(429);
+      expect(results[0].header).toBeUndefined;
+      expect(results[1].status).toBe(200);
+      expect(results[2].header).toEqual(
+        JSON.stringify({ attempt: 0, errorCode: 429 })
+      );
+      expect(results[5].header).toEqual(
+        JSON.stringify({ attempt: 1, errorCode: 429 })
+      );
+    });
 
-    // it('persist retryable statusCode has attempt limitation', async () => {});
+    it('[payload>64kb] retry with reading IDB is throttled with every successful response', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 6) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
 
-    // it('persist retryable statusCode beacons can include attempt and errorCode in headers', async () => {});
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 2000,
+          });
+          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
+            retry: { limit: 0, persist: true },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 500);
+          // waiting, will not trigger retry
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 1000);
+          // throttling finished, will trigger retry
+          // 500 + 2000 (throttle wait) + grace period
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2600);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      expect(results.length).toBe(6);
+      expect(results[0].status).toBe(429);
+      expect(results[0].header).toBeUndefined;
+      expect(results[1].status).toBe(200);
+      expect(results[2].header).toEqual(
+        JSON.stringify({ attempt: 0, errorCode: 429 })
+      );
+      expect(results[5].header).toEqual(
+        JSON.stringify({ attempt: 1, errorCode: 429 })
+      );
+    });
 
-    // it('persistent data can be retried on another page', async () => {});
+    it('in memory retry statusCode response will not retry', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 3) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 1,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/502`, 'hi', {
+            retry: {
+              limit: 1,
+              persist: true,
+              inMemoryRetryStatusCodes: [502],
+            },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2500);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(3);
+      expect(results[0].status).toBe(502);
+      expect(results[0].header).toBeUndefined;
+      expect(results[1].status).toBe(502);
+      expect(results[1].header).toBeUndefined;
+      expect(results[2].status).toBe(200);
+    });
+
+    it('[payload>64kb] in memory retry statusCode response will not retry', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 3) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 1,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/502`, 'h'.repeat(65_000), {
+            retry: {
+              limit: 1,
+              persist: true,
+              inMemoryRetryStatusCodes: [502],
+            },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2500);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(3);
+      expect(results[0].status).toBe(502);
+      expect(results[0].header).toBeUndefined;
+      expect(results[1].status).toBe(502);
+      expect(results[1].header).toBeUndefined;
+      expect(results[2].status).toBe(200);
+    });
+
+    it('persisting retryable statusCode has attempt limitation', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 6) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/429`, 'hi', {
+            retry: {
+              limit: 0,
+              persist: true,
+              persistRetryStatusCodes: [429], // default is [429, 503]
+            },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 1000);
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2000);
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'hi', {
+              retry: { limit: 0, persist: true },
+            });
+          }, 3000);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(6);
+      expect(results.map((r) => r.status)).toEqual([
+        429,
+        200,
+        429,
+        200,
+        429,
+        200,
+      ]);
+    });
+
+    it('[payload>64kb] persisting retryable statusCode has attempt limitation', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 6) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
+            retry: {
+              limit: 0,
+              persist: true,
+              persistRetryStatusCodes: [429], // default is [429, 503]
+            },
+          });
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 1000);
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 2000);
+          setTimeout(() => {
+            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+              retry: { limit: 0, persist: true },
+            });
+          }, 3000);
+        },
+        [server.sslUrl]
+      );
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(6);
+      expect(results.map((r) => r.status)).toEqual([
+        429,
+        200,
+        429,
+        200,
+        429,
+        200,
+      ]);
+    });
+
+    it('persistent data can be retried on another page', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 3) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/429`, 'hi', {
+            retry: {
+              limit: 0,
+              persist: true,
+              persistRetryStatusCodes: [429], // default is [429, 503]
+            },
+          });
+        },
+        [server.sslUrl]
+      );
+
+      const page2 = await context.newPage();
+      await page2.goto(server.sslUrl);
+      await page2.addScriptTag(script);
+      page2.on('console', async (msg) => {
+        const msgs = [];
+        for (let i = 0; i < msg.args().length; ++i) {
+          if (pageClosed) break;
+          msgs.push(await msg.args()[i].jsonValue());
+        }
+        console.log(`[page-2][${msg.type()}]\t=> ${msg.text()}`);
+      });
+      await page2.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/200`, 'hi', {
+            retry: {
+              limit: 0,
+            },
+          });
+        },
+        [server.sslUrl]
+      );
+
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(3);
+      expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+    });
+
+    it('[payload>64kb] persistent data can be retried on another page', async () => {
+      const [serverPromise, resolver] = defer();
+      const results = [];
+      let serverCount = 0;
+      server.post('/api/:status', ({ params, headers }, res) => {
+        const status = +params.status;
+        const payload = { status, header: headers['x-retry-context'] };
+        results.push(payload);
+        console.log(`Received ${++serverCount} request`, payload);
+        if (serverCount === 3) {
+          resolver(null);
+        }
+        res.status(status).send(`Status: ${status}`);
+      });
+
+      await page.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
+            retry: {
+              limit: 0,
+              persist: true,
+              persistRetryStatusCodes: [429], // default is [429, 503]
+            },
+          });
+        },
+        [server.sslUrl]
+      );
+
+      const page2 = await context.newPage();
+      await page2.goto(server.sslUrl);
+      await page2.addScriptTag(script);
+      page2.on('console', async (msg) => {
+        const msgs = [];
+        for (let i = 0; i < msg.args().length; ++i) {
+          if (pageClosed) break;
+          msgs.push(await msg.args()[i].jsonValue());
+        }
+        console.log(`[page-2][${msg.type()}]\t=> ${msg.text()}`);
+      });
+      await page2.evaluate(
+        ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
+          window.setRetryQueueConfig({
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          });
+          window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+            retry: {
+              limit: 0,
+            },
+          });
+        },
+        [server.sslUrl]
+      );
+
+      await serverPromise;
+      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+      expect(results.length).toBe(3);
+      expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+    });
   }
 );

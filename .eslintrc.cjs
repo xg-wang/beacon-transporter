@@ -50,9 +50,10 @@ module.exports = {
         'jest/globals': true,
         node: true,
       },
-      files: ['__tests__/**/*.js'],
+      files: ['__tests__/**/*.ts'],
       rules: {
         'no-undef': 'off',
+        'import/no-duplicates': 'off',
         '@typescript-eslint/no-var-requires': 'off',
       },
     },

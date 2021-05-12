@@ -1,5 +1,4 @@
 export interface BeaconConfig {
-  debug?: boolean;
   retry?: {
     limit: number;
     inMemoryRetryStatusCodes?: number[];

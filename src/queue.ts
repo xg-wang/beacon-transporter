@@ -47,16 +47,11 @@ let retryQueueConfig: RetryQueueConfig = {
   batchEvictionNumber: 300,
   throttleWait: 5 * 60 * 1000,
 };
-export function setRetryQueueConfig(config: RetryQueueConfig): void {
-  retryQueueConfig = config;
-  retryQueue.setThrottleWait(config.throttleWait);
-}
 
-function throttle(fn: () => void, timeFrame: number) {
+function throttle(fn: () => void, timeFrame: number): () => void {
   let lastTime = 0;
   return function () {
     const now = Date.now();
-    debug('[throttle] Skip fn()');
     if (now - lastTime > timeFrame) {
       debug('[throttle] Run fn()');
       fn();
@@ -76,7 +71,7 @@ export class QueueImpl implements Queue {
     );
   }
 
-  public setThrottleWait(wait: number) {
+  public setThrottleWait(wait: number): void {
     this.throttledReplay = throttle(this.replayEntries.bind(this), wait);
   }
 
@@ -88,13 +83,13 @@ export class QueueImpl implements Queue {
     debug('Replaying entry');
     shift<RetryEntryWithAttemp>(1, this.withStore)
       .then((entries) => {
-        debug('Replaying entry: ' + JSON.stringify(entries, null, 2));
+        debug(`Replaying entry: ${entries.length}`);
         if (entries.length > 0) {
           const { url, body, timestamp, statusCode, attemptCount } = entries[0];
           return fetchFn(url, body, createHeaders(attemptCount, statusCode))
             .then(() => this.replayEntries())
             .catch(() => {
-              if (attemptCount >= retryQueueConfig.attemptLimit) {
+              if (attemptCount + 1 >= retryQueueConfig.attemptLimit) {
                 debug(
                   'Exceeded attempt count',
                   JSON.stringify(
@@ -135,7 +130,7 @@ export class QueueImpl implements Queue {
       ...entry,
       attemptCount: 0,
     };
-    debug('Persisting to DB: ' + JSON.stringify(entry, null, 2));
+    debug('Persisting to DB ' + entry.url);
     push(entryWithAttemp, retryQueueConfig, this.withStore).catch(logError);
   }
 }
@@ -160,4 +155,8 @@ export function pushToQueue(entry: RetryEntry): void {
 }
 export function notifyQueue(): void {
   retryQueue.onNotify();
+}
+export function setRetryQueueConfig(config: RetryQueueConfig): void {
+  retryQueueConfig = config;
+  retryQueue.setThrottleWait(config.throttleWait);
 }

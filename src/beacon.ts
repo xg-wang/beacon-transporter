@@ -24,7 +24,7 @@ class Beacon {
     this.timestamp = Date.now();
     const retryCountLeft = config?.retry?.limit ?? 0;
     this.retry(() => fetchFn(url, body, {}), retryCountLeft).catch((reason) =>
-      logError(JSON.stringify(reason))
+      logError('Retry finished with rejection: ' + JSON.stringify(reason))
     );
   }
 

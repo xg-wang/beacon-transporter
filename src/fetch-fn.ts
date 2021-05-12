@@ -13,12 +13,11 @@ function keepaliveFetch(
   body: string,
   headers: HeadersInit
 ): Promise<Response> {
-  debug('use keep alive fetch');
   return new Promise((resolve, reject) => {
     fetch(url, createRequestInit({ body, keepalive: true, headers }))
       .catch(() => {
-        debug('fallback to keep alive false');
         // keepalive true fetch can throw error if body exceeds 64kb
+        debug('fetch failed 1st');
         return fetch(
           url,
           createRequestInit({ body, keepalive: false, headers })
@@ -42,8 +41,6 @@ function fallbackFetch(
   body: string,
   headers: HeadersInit
 ): Promise<Response | null> {
-  debug('use sendBeacon');
-
   return new Promise((resolve, reject) => {
     if (supportSendBeacon) {
       let result = false;
@@ -55,6 +52,7 @@ function fallbackFetch(
       // if the user agent is not able to successfully queue the data for transfer,
       // send the payload with fetch api instead
       if (result) {
+        debug(`sendBeacon passed, body length: ${body.length}`);
         resolve(null);
         return;
       }
