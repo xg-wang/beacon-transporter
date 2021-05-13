@@ -32,11 +32,15 @@ self.setRetryQueueConfig = setRetryQueueConfig;
 `,
 };
 
+function createBody(lengthMode: string): string {
+  return lengthMode === '>64kb' ? 's'.repeat(70000) : 'hi';
+}
+
 // FireFox doesn't cap sendBeacon / keepalive fetch string limit
 // https://github.com/xg-wang/fetch-keepalive
-describe.each(['chromium', 'webkit'].map((t) => [t]))(
-  '[%s] beacon persistence',
-  (browserName) => {
+describe.each([['chromium', '<64kb'], ['chromium', '>64kb'], ['webkit', '<64kb'], ['webkit', '>64kb']])(
+  '[%s %s] beacon persistence',
+  (browserName, contentLength) => {
     const browserType: BrowserType<Browser> = playwright[browserName];
     let browser: Browser;
     let context: BrowserContext;
@@ -60,7 +64,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       page = await context.newPage();
       server = await createTestServer();
       server.get('/', (request, response) => {
-        response.end('hi');
+        response.end('hello!');
       });
       page.on('console', async (msg) => {
         const msgs = [];
@@ -98,7 +102,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       let numberOfBeacons = 0;
       await page.route('**/api/*', (route) => {
         // fetch will fallback to keepalive false and try 2nd time
-        if (++numberOfBeacons >= 3) {
+        if (++numberOfBeacons >= (contentLength === '>64kb' ? 2 : 3)) {
           console.log('Continue route request');
           return route.continue();
         } else {
@@ -107,66 +111,21 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
         }
       });
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
-          window.beacon(`${url}/api/200`, 'hi', {
+          window.beacon(`${url}/api/200`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 1000);
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
-      expect(numberOfBeacons).toBe(4);
-      expect(results.length).toBe(2);
-      expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
-    });
-
-    it('[payload>64kb] stores beacon data if network having issue, retry on next successful response', async () => {
-      const [serverPromise, resolver] = defer();
-      const results = [];
-      let serverCount = 0;
-      server.post('/api/:status', ({ params, headers }, res) => {
-        const status = +params.status;
-        const payload = { header: headers['x-retry-context'] };
-        results.push(payload);
-        console.log(`Received ${++serverCount} request`, payload);
-        if (serverCount === 2) {
-          resolver(null);
-        }
-        res.status(status).send(`Status: ${status}`);
-      });
-
-      let numberOfBeacons = 0;
-      await page.route('**/api/*', (route) => {
-        if (++numberOfBeacons >= 3) {
-          console.log('Continue route request');
-          return route.continue();
-        } else {
-          console.log('Abort route request');
-          return route.abort();
-        }
-      });
-      await page.evaluate(
-        ([url]) => {
-          window.setRetryHeaderPath('x-retry-context');
-          window.beacon(`${url}/api/200`, 's'.repeat(65_000), {
-            retry: { limit: 0, persist: true },
-          });
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, 's'.repeat(65_000), {
-              retry: { limit: 0, persist: true },
-            });
-          }, 1000);
-        },
-        [server.sslUrl]
-      );
-      await serverPromise;
-      expect(numberOfBeacons).toBe(4);
+      expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 4 : 3);
       expect(results.length).toBe(2);
       expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
     });
@@ -187,7 +146,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -195,90 +154,29 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 2000,
           });
-          window.beacon(`${url}/api/429`, 'hi', {
+          window.beacon(`${url}/api/429`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 500);
           // waiting, will not trigger retry
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 1000);
           // throttling finished, will trigger retry
           // 500 + 2000 (throttle wait) + grace period
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 2600);
         },
-        [server.sslUrl]
-      );
-      await serverPromise;
-      expect(results.length).toBe(6);
-      expect(results[0].status).toBe(429);
-      expect(results[0].header).toBeUndefined;
-      expect(results[1].status).toBe(200);
-      expect(results[2].header).toEqual(
-        JSON.stringify({ attempt: 0, errorCode: 429 })
-      );
-      expect(results[5].header).toEqual(
-        JSON.stringify({ attempt: 1, errorCode: 429 })
-      );
-    });
-
-    it('[payload>64kb] retry with reading IDB is throttled with every successful response', async () => {
-      const [serverPromise, resolver] = defer();
-      const results = [];
-      let serverCount = 0;
-      server.post('/api/:status', ({ params, headers }, res) => {
-        const status = +params.status;
-        const payload = { status, header: headers['x-retry-context'] };
-        results.push(payload);
-        console.log(`Received ${++serverCount} request`, payload);
-        if (serverCount === 6) {
-          resolver(null);
-        }
-        res.status(status).send(`Status: ${status}`);
-      });
-
-      await page.evaluate(
-        ([url]) => {
-          window.setRetryHeaderPath('x-retry-context');
-          window.setRetryQueueConfig({
-            attemptLimit: 2,
-            maxNumber: 10,
-            batchEvictionNumber: 3,
-            throttleWait: 2000,
-          });
-          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
-            retry: { limit: 0, persist: true },
-          });
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
-              retry: { limit: 0, persist: true },
-            });
-          }, 500);
-          // waiting, will not trigger retry
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
-              retry: { limit: 0, persist: true },
-            });
-          }, 1000);
-          // throttling finished, will trigger retry
-          // 500 + 2000 (throttle wait) + grace period
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
-              retry: { limit: 0, persist: true },
-            });
-          }, 2600);
-        },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
       expect(results.length).toBe(6);
@@ -309,7 +207,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 1,
@@ -317,7 +215,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/502`, 'hi', {
+          window.beacon(`${url}/api/502`, bodyPayload, {
             retry: {
               limit: 1,
               persist: true,
@@ -325,12 +223,12 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 2500);
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
       await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -358,7 +256,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 1,
@@ -366,7 +264,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/502`, 'h'.repeat(65_000), {
+          window.beacon(`${url}/api/502`, bodyPayload, {
             retry: {
               limit: 1,
               persist: true,
@@ -374,12 +272,12 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 2500);
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
       await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -407,7 +305,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -415,7 +313,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/429`, 'hi', {
+          window.beacon(`${url}/api/429`, bodyPayload, {
             retry: {
               limit: 0,
               persist: true,
@@ -423,22 +321,22 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 1000);
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 2000);
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'hi', {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 3000);
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
       await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -469,7 +367,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -477,7 +375,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
+          window.beacon(`${url}/api/429`, bodyPayload, {
             retry: {
               limit: 0,
               persist: true,
@@ -485,22 +383,22 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 1000);
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 2000);
           setTimeout(() => {
-            window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+            window.beacon(`${url}/api/200`, bodyPayload, {
               retry: { limit: 0, persist: true },
             });
           }, 3000);
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
       await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -531,7 +429,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -539,7 +437,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/429`, 'hi', {
+          window.beacon(`${url}/api/429`, bodyPayload, {
             retry: {
               limit: 0,
               persist: true,
@@ -547,7 +445,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
 
       const page2 = await context.newPage();
@@ -562,7 +460,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
         console.log(`[page-2][${msg.type()}]\t=> ${msg.text()}`);
       });
       await page2.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -570,13 +468,13 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/200`, 'hi', {
+          window.beacon(`${url}/api/200`, bodyPayload, {
             retry: {
               limit: 0,
             },
           });
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
 
       await serverPromise;
@@ -601,7 +499,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
       });
 
       await page.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -609,7 +507,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/429`, 'h'.repeat(65_000), {
+          window.beacon(`${url}/api/429`, bodyPayload, {
             retry: {
               limit: 0,
               persist: true,
@@ -617,7 +515,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             },
           });
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
 
       const page2 = await context.newPage();
@@ -632,7 +530,7 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
         console.log(`[page-2][${msg.type()}]\t=> ${msg.text()}`);
       });
       await page2.evaluate(
-        ([url]) => {
+        ([url, bodyPayload]) => {
           window.setRetryHeaderPath('x-retry-context');
           window.setRetryQueueConfig({
             attemptLimit: 2,
@@ -640,13 +538,13 @@ describe.each(['chromium', 'webkit'].map((t) => [t]))(
             batchEvictionNumber: 3,
             throttleWait: 200,
           });
-          window.beacon(`${url}/api/200`, 'h'.repeat(65_000), {
+          window.beacon(`${url}/api/200`, bodyPayload, {
             retry: {
               limit: 0,
             },
           });
         },
-        [server.sslUrl]
+        [server.sslUrl, createBody(contentLength)]
       );
 
       await serverPromise;
