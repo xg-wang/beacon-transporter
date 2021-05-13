@@ -1,0 +1,39 @@
+<button type="button" id="200">send to 200</button>
+<button type="button" id="502">send to 502 (in memory retry)</button>
+<button type="button" id="429">send to 429 (db retry)</button>
+
+<script type="module" src="/dist/index.js"></script>
+<script>
+  function $(id) {
+    return document.getElementById(id);
+  }
+</script>
+<script id="code" type="module">
+  import beacon, {
+    setRetryHeaderPath,
+    setRetryQueueConfig,
+  } from '/dist/index.js';
+
+  self.__DEBUG_BEACON_TRANSPORTER = true;
+
+  setRetryHeaderPath('x-retry-context');
+  setRetryQueueConfig({
+    attemptLimit: 1,
+    maxNumber: 10,
+    batchEvictionNumber: 3,
+    throttleWait: 2000,
+  });
+
+  ['200', '502', '429'].forEach((status) =>
+    $(status).addEventListener('click', () =>
+      beacon(`/api/${status}`, 'hello', {
+        retry: { limit: 3, persist: true },
+      })
+    )
+  );
+</script>
+
+<pre id="pre"></pre>
+<script>
+  pre.textContent = code.textContent;
+</script>

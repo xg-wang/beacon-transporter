@@ -4,7 +4,4 @@
 
 Let you transport data back to server easier.
 
-```javascript
-import beacon from 'beacon-transporter';
-beacon(`/api`, 'hi', { retryCount: 3 })
-```
+Checkout the [demo](./demo/client/index.html) for a simple example.

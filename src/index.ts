@@ -4,3 +4,5 @@
  */
 
 export { default } from './beacon';
+export * from './interfaces';
+export { setRetryHeaderPath, setRetryQueueConfig } from './queue';

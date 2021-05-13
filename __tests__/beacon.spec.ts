@@ -4,6 +4,14 @@ import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
+import type beaconType from '../src/';
+
+declare global {
+  interface Window {
+    beacon: typeof beaconType;
+  }
+}
+
 function defer(): [Promise<unknown>, (value: unknown) => void] {
   let resolver: (value: unknown) => void;
   const runningPromise = new Promise((res) => (resolver = res));
@@ -14,12 +22,13 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
-globalThis.beacon = beacon;
+self.beacon = beacon;
+self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
 };
 
 describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
-  '%s',
+  '[%s] beacon',
   (name) => {
     const browserType: BrowserType<Browser> = playwright[name];
     let browser: Browser;
@@ -70,7 +79,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       const [, result] = await Promise.all([
         serverPromise,
         page.evaluate((url) => {
-          return (<any>window).beacon(`${url}/api`, 'hello');
+          return window.beacon(`${url}/api`, 'hello');
         }, server.sslUrl),
       ]);
 
@@ -94,7 +103,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await Promise.all([
         serverPromise,
         page.evaluate((url) => {
-          return (<any>window).beacon(`${url}/api`, 's'.repeat(64_100));
+          return window.beacon(`${url}/api`, 's'.repeat(64_100));
         }, server.sslUrl),
       ]);
 
@@ -126,7 +135,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         await page.evaluate(
           ([url, eventName]) => {
             document.addEventListener(eventName, function () {
-              (<any>window).beacon(`${url}/api`, 'closing');
+              window.beacon(`${url}/api`, 'closing');
             });
           },
           [server.sslUrl, getCloseTabEvent(name)]
@@ -154,7 +163,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url, eventName]) => {
           document.addEventListener(eventName, function () {
-            (<any>window).beacon(`${url}/api`, 's'.repeat(64_100));
+            window.beacon(`${url}/api`, 's'.repeat(64_100));
           });
         },
         [server.sslUrl, getCloseTabEvent(name)]
@@ -184,14 +193,14 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       // });
       await page.evaluate(
         ([url]) => {
-          return (<any>window).beacon(`${url}/api`, 'hi', {
-            retry: { limit: 3 },
+          return window.beacon(`${url}/api`, 'hi', {
+            retry: { limit: 2 },
           });
         },
         [server.sslUrl]
       );
-      await page.waitForTimeout(5000);
-      expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (3 + 1) * 2);
+      await page.waitForTimeout(7000);
+      expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (2 + 1) * 2);
     });
 
     it('retry on server response statusCode', async () => {
@@ -210,25 +219,19 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       });
       await page.goto(server.sslUrl);
       await page.addScriptTag(script);
-      // page.on('console', async (msg) => {
-      //   for (let i = 0; i < msg.args().length; ++i)
-      //     console.log(`${i}: ${await msg.args()[i].jsonValue()}`);
-      // });
       await page.evaluate(
         ([url]) => {
-          (<any>window).beacon(`${url}/api/retry`, 'hi', {
-            // debug: true,
-            retry: { limit: 3, statusCodes: [502] },
+          window.beacon(`${url}/api/retry`, 'hi', {
+            retry: { limit: 2, inMemoryRetryStatusCodes: [502] },
           });
-          (<any>window).beacon(`${url}/api/noretry`, 'hi', {
-            // debug: true,
-            retry: { limit: 3 },
+          window.beacon(`${url}/api/noretry`, 'hi', {
+            retry: { limit: 2 },
           });
         },
         [server.sslUrl]
       );
-      await page.waitForTimeout(5000);
-      expect(requests1.length).toBe(name === 'firefox' ? 1 : (3 + 1));
+      await page.waitForTimeout(7000);
+      expect(requests1.length).toBe(name === 'firefox' ? 1 : (2 + 1));
       expect(requests2.length).toBe(name === 'firefox' ? 1 : 1);
     });
   }
