@@ -25,10 +25,10 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
-self.beacon = beacon;
-self.__DEBUG_BEACON_TRANSPORTER = true;
-self.setRetryHeaderPath = setRetryHeaderPath;
-self.setRetryQueueConfig = setRetryQueueConfig;
+window.beacon = beacon;
+window.__DEBUG_BEACON_TRANSPORTER = true;
+window.setRetryHeaderPath = setRetryHeaderPath;
+window.setRetryQueueConfig = setRetryQueueConfig;
 `,
 };
 
@@ -125,7 +125,7 @@ describe.each([['chromium', '<64kb'], ['chromium', '>64kb'], ['webkit', '<64kb']
         [server.sslUrl, createBody(contentLength)]
       );
       await serverPromise;
-      expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 4 : 3);
+      expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 : 4);
       expect(results.length).toBe(2);
       expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
     });
@@ -351,68 +351,6 @@ describe.each([['chromium', '<64kb'], ['chromium', '>64kb'], ['webkit', '<64kb']
       ]);
     });
 
-    it('[payload>64kb] persisting retryable statusCode has attempt limitation', async () => {
-      const [serverPromise, resolver] = defer();
-      const results = [];
-      let serverCount = 0;
-      server.post('/api/:status', ({ params, headers }, res) => {
-        const status = +params.status;
-        const payload = { status, header: headers['x-retry-context'] };
-        results.push(payload);
-        console.log(`Received ${++serverCount} request`, payload);
-        if (serverCount === 6) {
-          resolver(null);
-        }
-        res.status(status).send(`Status: ${status}`);
-      });
-
-      await page.evaluate(
-        ([url, bodyPayload]) => {
-          window.setRetryHeaderPath('x-retry-context');
-          window.setRetryQueueConfig({
-            attemptLimit: 2,
-            maxNumber: 10,
-            batchEvictionNumber: 3,
-            throttleWait: 200,
-          });
-          window.beacon(`${url}/api/429`, bodyPayload, {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [429], // default is [429, 503]
-            },
-          });
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, bodyPayload, {
-              retry: { limit: 0, persist: true },
-            });
-          }, 1000);
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, bodyPayload, {
-              retry: { limit: 0, persist: true },
-            });
-          }, 2000);
-          setTimeout(() => {
-            window.beacon(`${url}/api/200`, bodyPayload, {
-              retry: { limit: 0, persist: true },
-            });
-          }, 3000);
-        },
-        [server.sslUrl, createBody(contentLength)]
-      );
-      await serverPromise;
-      await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
-      expect(results.length).toBe(6);
-      expect(results.map((r) => r.status)).toEqual([
-        429,
-        200,
-        429,
-        200,
-        429,
-        200,
-      ]);
-    });
-
     it('persistent data can be retried on another page', async () => {
       const [serverPromise, resolver] = defer();
       const results = [];
@@ -481,6 +419,7 @@ describe.each([['chromium', '<64kb'], ['chromium', '>64kb'], ['webkit', '<64kb']
       await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
       expect(results.length).toBe(3);
       expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+      await page2.close();
     });
 
     it('[payload>64kb] persistent data can be retried on another page', async () => {
