@@ -95,7 +95,6 @@ export class QueueImpl implements Queue {
                   JSON.stringify(
                     {
                       url,
-                      body,
                       timestamp,
                       statusCode,
                     },
