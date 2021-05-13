@@ -6,9 +6,30 @@
 
 Reliable beacon API for the browser
 
+## Functions
+
+|  Function | Description |
+|  --- | --- |
+|  [setRetryHeaderPath(path)](./beacon-transporter.setretryheaderpath.md) |  |
+|  [setRetryQueueConfig(config)](./beacon-transporter.setretryqueueconfig.md) |  |
+
+## Interfaces
+
+|  Interface | Description |
+|  --- | --- |
+|  [BeaconConfig](./beacon-transporter.beaconconfig.md) |  |
+|  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
+|  [ResponseRetryRejection](./beacon-transporter.responseretryrejection.md) |  |
+
 ## Variables
 
 |  Variable | Description |
 |  --- | --- |
 |  [beacon](./beacon-transporter.beacon.md) |  |
+
+## Type Aliases
+
+|  Type Alias | Description |
+|  --- | --- |
+|  [RetryRejection](./beacon-transporter.retryrejection.md) |  |
 

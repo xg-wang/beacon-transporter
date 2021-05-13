@@ -4,12 +4,57 @@
 
 ```ts
 
-// Warning: (ae-forgotten-export) The symbol "BeaconConfig" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 const beacon: (url: string, body: string, config?: BeaconConfig | undefined) => void;
 
 export default beacon;
+
+// @public (undocumented)
+export interface BeaconConfig {
+    // (undocumented)
+    retry?: {
+        limit: number;
+        inMemoryRetryStatusCodes?: number[];
+        persist?: boolean;
+        persistRetryStatusCodes?: number[];
+        headerPath?: string;
+    };
+}
+
+// @public (undocumented)
+export interface NetworkRetryRejection {
+    // (undocumented)
+    body: string;
+    // (undocumented)
+    statusCode: undefined;
+    // (undocumented)
+    type: 'network';
+    // (undocumented)
+    url: string;
+}
+
+// @public (undocumented)
+export interface ResponseRetryRejection {
+    // (undocumented)
+    body: string;
+    // (undocumented)
+    statusCode: number;
+    // (undocumented)
+    type: 'response';
+    // (undocumented)
+    url: string;
+}
+
+// @public (undocumented)
+export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
+
+// @public (undocumented)
+export function setRetryHeaderPath(path: string): void;
+
+// Warning: (ae-forgotten-export) The symbol "RetryQueueConfig" needs to be exported by the entry point index.d.ts
+//
+// @public (undocumented)
+export function setRetryQueueConfig(config: RetryQueueConfig): void;
 
 
 ```
