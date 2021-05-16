@@ -1,4 +1,4 @@
-import { createStore, push, shift } from 'idb-queue';
+import { clear,createStore, push, shift } from 'idb-queue';
 
 import fetchFn from './fetch-fn';
 import { debug, logError } from './utils';
@@ -17,21 +17,18 @@ export interface RetryQueueConfig {
   throttleWait: number;
 }
 
-interface RetryEntryWithAttemp extends RetryEntry {
+interface RetryEntryWithAttempt extends RetryEntry {
   attemptCount: number;
 }
 
 interface Queue {
   onNotify(): void;
   push(entry: RetryEntry): void;
+  clear(): Promise<void>;
   setThrottleWait(wait: number): void;
 }
 
 let retryHeaderPath: string | undefined;
-export function setRetryHeaderPath(path: string): void {
-  debug('Set retry header path to ', path);
-  retryHeaderPath = path;
-}
 
 function createHeaders(attempt: number, errorCode?: number): HeadersInit {
   if (!retryHeaderPath) return {};
@@ -81,7 +78,7 @@ export class QueueImpl implements Queue {
 
   private replayEntries(): void {
     debug('Replaying entry');
-    shift<RetryEntryWithAttemp>(1, this.withStore)
+    shift<RetryEntryWithAttempt>(1, this.withStore)
       .then((entries) => {
         debug(`Replaying entry: ${entries.length}`);
         if (entries.length > 0) {
@@ -125,12 +122,16 @@ export class QueueImpl implements Queue {
 
   // throttle retry timer when pushed
   public push(entry: RetryEntry): void {
-    const entryWithAttemp: RetryEntryWithAttemp = {
+    const entryWithAttempt: RetryEntryWithAttempt = {
       ...entry,
       attemptCount: 0,
     };
     debug('Persisting to DB ' + entry.url);
-    push(entryWithAttemp, retryQueueConfig, this.withStore).catch(logError);
+    push(entryWithAttempt, retryQueueConfig, this.withStore).catch(logError);
+  }
+
+  public clear(): Promise<void> {
+    return clear(this.withStore).catch(logError);
   }
 }
 
@@ -144,6 +145,9 @@ class NoopQueue {
   setThrottleWait(): void {
     // noop
   }
+  clear(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 const hasSupport = !!self.indexedDB;
@@ -155,7 +159,15 @@ export function pushToQueue(entry: RetryEntry): void {
 export function notifyQueue(): void {
   retryQueue.onNotify();
 }
+
+export function setRetryHeaderPath(path: string): void {
+  debug('Set retry header path to ', path);
+  retryHeaderPath = path;
+}
 export function setRetryQueueConfig(config: RetryQueueConfig): void {
   retryQueueConfig = config;
   retryQueue.setThrottleWait(config.throttleWait);
+}
+export function clearQueue(): Promise<void> {
+  return retryQueue.clear();
 }
