@@ -1,4 +1,4 @@
-import { createStore, push, shift } from 'idb-queue';
+import { clear,createStore, push, shift } from 'idb-queue';
 
 import fetchFn from './fetch-fn';
 import { debug, logError } from './utils';
@@ -24,14 +24,11 @@ interface RetryEntryWithAttempt extends RetryEntry {
 interface Queue {
   onNotify(): void;
   push(entry: RetryEntry): void;
+  clear(): Promise<void>;
   setThrottleWait(wait: number): void;
 }
 
 let retryHeaderPath: string | undefined;
-export function setRetryHeaderPath(path: string): void {
-  debug('Set retry header path to ', path);
-  retryHeaderPath = path;
-}
 
 function createHeaders(attempt: number, errorCode?: number): HeadersInit {
   if (!retryHeaderPath) return {};
@@ -132,6 +129,10 @@ export class QueueImpl implements Queue {
     debug('Persisting to DB ' + entry.url);
     push(entryWithAttempt, retryQueueConfig, this.withStore).catch(logError);
   }
+
+  public clear(): Promise<void> {
+    return clear(this.withStore).catch(logError);
+  }
 }
 
 class NoopQueue {
@@ -144,6 +145,9 @@ class NoopQueue {
   setThrottleWait(): void {
     // noop
   }
+  clear(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 const hasSupport = !!self.indexedDB;
@@ -155,7 +159,15 @@ export function pushToQueue(entry: RetryEntry): void {
 export function notifyQueue(): void {
   retryQueue.onNotify();
 }
+
+export function setRetryHeaderPath(path: string): void {
+  debug('Set retry header path to ', path);
+  retryHeaderPath = path;
+}
 export function setRetryQueueConfig(config: RetryQueueConfig): void {
   retryQueueConfig = config;
   retryQueue.setThrottleWait(config.throttleWait);
+}
+export function clearQueue(): Promise<void> {
+  return retryQueue.clear();
 }

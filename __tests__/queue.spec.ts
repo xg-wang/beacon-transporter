@@ -5,11 +5,12 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
 import type beaconType from '../src/';
-import type { setRetryHeaderPath, setRetryQueueConfig } from '../src/';
+import type { clearQueue, setRetryHeaderPath, setRetryQueueConfig } from '../src/';
 
 declare global {
   interface Window {
     beacon: typeof beaconType;
+    clearQueue: typeof clearQueue;
     setRetryHeaderPath: typeof setRetryHeaderPath;
     setRetryQueueConfig: typeof setRetryQueueConfig;
   }
@@ -27,6 +28,7 @@ const script = {
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
 window.beacon = beacon;
 window.__DEBUG_BEACON_TRANSPORTER = true;
+window.clearQueue = clearQueue;
 window.setRetryHeaderPath = setRetryHeaderPath;
 window.setRetryQueueConfig = setRetryQueueConfig;
 `,
@@ -75,7 +77,7 @@ describe.each([
         if (pageClosed) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
-      console.log(`[${msg.type()}]\t=> ${msg.text()}`);
+      console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page.goto(server.sslUrl);
     await page.addScriptTag(script);
@@ -243,6 +245,54 @@ describe.each([
     expect(results[2].status).toBe(200);
   });
 
+  it('Storage can be manually cleared', async () => {
+    const [serverPromise, resolver] = defer();
+    const results = [];
+    let serverCount = 0;
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = { status, header: headers['x-retry-context'] };
+      results.push(payload);
+      console.log(`Received ${++serverCount} request`, payload);
+      if (serverCount === 2) {
+        resolver(null);
+      }
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        window.setRetryHeaderPath('x-retry-context');
+        window.setRetryQueueConfig({
+          attemptLimit: 1,
+          maxNumber: 10,
+          batchEvictionNumber: 3,
+          throttleWait: 200,
+        });
+        window.beacon(`${url}/api/429`, bodyPayload, {
+          retry: {
+            limit: 1,
+            persist: true,
+            persistRetryStatusCodes: [429]
+          },
+        });
+        setTimeout(async () => {
+          await window.clearQueue();
+          window.beacon(`${url}/api/200`, bodyPayload, {
+            retry: { limit: 0, persist: true },
+          });
+        }, 2500);
+      },
+      [server.sslUrl, createBody(contentLength)]
+    );
+    await serverPromise;
+    await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+    expect(results.length).toBe(2);
+    expect(results[0].status).toBe(429);
+    expect(results[0].header).toBeUndefined;
+    expect(results[1].status).toBe(200);
+  });
+
   it('persisting retryable statusCode has attempt limitation', async () => {
     const [serverPromise, resolver] = defer();
     const results = [];
@@ -349,7 +399,7 @@ describe.each([
         if (pageClosed) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
-      console.log(`[page-2][${msg.type()}]\t=> ${msg.text()}`);
+      console.log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.evaluate(
       ([url, bodyPayload]) => {
