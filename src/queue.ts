@@ -1,4 +1,4 @@
-import { clear, createStore, push, shift, peek, peekBack } from 'idb-queue';
+import { clear, createStore, peek, peekBack,push, shift } from 'idb-queue';
 
 import fetchFn from './fetch-fn';
 import { debug, logError } from './utils';
@@ -136,14 +136,14 @@ export class QueueImpl implements Queue {
     return clear(this.withStore).catch(logError);
   }
 
-  public peek(count: number = 1): Promise<RetryEntry[]> {
+  public peek(count = 1): Promise<RetryEntry[]> {
     return peek<RetryEntry>(count, this.withStore).catch((reason) => {
       logError(reason);
       return [];
     });
   }
 
-  public peekBack(count: number = 1): Promise<RetryEntry[]> {
+  public peekBack(count = 1): Promise<RetryEntry[]> {
     return peekBack<RetryEntry>(count, this.withStore).catch((reason) => {
       logError(reason);
       return [];
