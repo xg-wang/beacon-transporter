@@ -4,7 +4,6 @@ export interface BeaconConfig {
     inMemoryRetryStatusCodes?: number[];
     persist?: boolean;
     persistRetryStatusCodes?: number[];
-    headerPath?: string;
   };
 }
 

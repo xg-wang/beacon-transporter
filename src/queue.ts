@@ -17,7 +17,7 @@ export interface RetryQueueConfig {
   throttleWait: number;
 }
 
-interface RetryEntryWithAttemp extends RetryEntry {
+interface RetryEntryWithAttempt extends RetryEntry {
   attemptCount: number;
 }
 
@@ -81,7 +81,7 @@ export class QueueImpl implements Queue {
 
   private replayEntries(): void {
     debug('Replaying entry');
-    shift<RetryEntryWithAttemp>(1, this.withStore)
+    shift<RetryEntryWithAttempt>(1, this.withStore)
       .then((entries) => {
         debug(`Replaying entry: ${entries.length}`);
         if (entries.length > 0) {
@@ -125,12 +125,12 @@ export class QueueImpl implements Queue {
 
   // throttle retry timer when pushed
   public push(entry: RetryEntry): void {
-    const entryWithAttemp: RetryEntryWithAttemp = {
+    const entryWithAttempt: RetryEntryWithAttempt = {
       ...entry,
       attemptCount: 0,
     };
     debug('Persisting to DB ' + entry.url);
-    push(entryWithAttemp, retryQueueConfig, this.withStore).catch(logError);
+    push(entryWithAttempt, retryQueueConfig, this.withStore).catch(logError);
   }
 }
 
