@@ -166,20 +166,20 @@ describe.each([
           window.beacon(`${url}/api/200`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
-        }, 500);
+        }, 1000);
         // waiting, will not trigger retry
         setTimeout(() => {
           window.beacon(`${url}/api/200`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
-        }, 1000);
+        }, 2000);
         // throttling finished, will trigger retry
-        // 500 + 2000 (throttle wait) + grace period
+        // 1000 + 2000 (throttle wait) + grace period
         setTimeout(() => {
           window.beacon(`${url}/api/200`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
-        }, 2600);
+        }, 3100);
       },
       [server.sslUrl, createBody(contentLength)]
     );
