@@ -79,7 +79,7 @@ describe.each([
       }
       console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
     });
-    await page.goto(server.sslUrl);
+    await page.goto(server.url);
     await page.addScriptTag(script);
   });
 
@@ -127,7 +127,7 @@ describe.each([
           });
         }, 1000);
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
     await serverPromise;
     expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 : 4);
@@ -181,7 +181,7 @@ describe.each([
           });
         }, 3100);
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
     await serverPromise;
     expect(results.length).toBe(6);
@@ -233,7 +233,7 @@ describe.each([
           });
         }, 2500);
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
     await serverPromise;
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -283,7 +283,7 @@ describe.each([
           });
         }, 2500);
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
     await serverPromise;
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -340,7 +340,7 @@ describe.each([
           });
         }, 3000);
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
     await serverPromise;
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
@@ -387,11 +387,11 @@ describe.each([
           },
         });
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
 
     const page2 = await context.newPage();
-    await page2.goto(server.sslUrl);
+    await page2.goto(server.url);
     await page2.addScriptTag(script);
     page2.on('console', async (msg) => {
       const msgs = [];
@@ -416,7 +416,7 @@ describe.each([
           },
         });
       },
-      [server.sslUrl, createBody(contentLength)]
+      [server.url, createBody(contentLength)]
     );
 
     await serverPromise;
