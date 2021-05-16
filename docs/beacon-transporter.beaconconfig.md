@@ -14,5 +14,5 @@ export interface BeaconConfig
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [retry?](./beacon-transporter.beaconconfig.retry.md) | { limit: number; inMemoryRetryStatusCodes?: number\[\]; persist?: boolean; persistRetryStatusCodes?: number\[\]; headerPath?: string; } | <i>(Optional)</i> |
+|  [retry?](./beacon-transporter.beaconconfig.retry.md) | { limit: number; inMemoryRetryStatusCodes?: number\[\]; persist?: boolean; persistRetryStatusCodes?: number\[\]; } | <i>(Optional)</i> |
 

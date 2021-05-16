@@ -10,6 +10,7 @@ Reliable beacon API for the browser
 
 |  Function | Description |
 |  --- | --- |
+|  [clearQueue()](./beacon-transporter.clearqueue.md) |  |
 |  [setRetryHeaderPath(path)](./beacon-transporter.setretryheaderpath.md) |  |
 |  [setRetryQueueConfig(config)](./beacon-transporter.setretryqueueconfig.md) |  |
 

@@ -12,6 +12,5 @@ retry?: {
         inMemoryRetryStatusCodes?: number[];
         persist?: boolean;
         persistRetryStatusCodes?: number[];
-        headerPath?: string;
     };
 ```

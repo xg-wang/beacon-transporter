@@ -17,9 +17,11 @@ export interface BeaconConfig {
         inMemoryRetryStatusCodes?: number[];
         persist?: boolean;
         persistRetryStatusCodes?: number[];
-        headerPath?: string;
     };
 }
+
+// @public (undocumented)
+export function clearQueue(): Promise<void>;
 
 // @public (undocumented)
 export interface NetworkRetryRejection {
