@@ -1,4 +1,4 @@
-import { clear,createStore, push, shift } from 'idb-queue';
+import { clear, createStore, peek, peekBack,push, shift } from 'idb-queue';
 
 import fetchFn from './fetch-fn';
 import { debug, logError } from './utils';
@@ -26,6 +26,8 @@ interface Queue {
   push(entry: RetryEntry): void;
   clear(): Promise<void>;
   setThrottleWait(wait: number): void;
+  peek(count: number): Promise<RetryEntry[]>;
+  peekBack(count: number): Promise<RetryEntry[]>;
 }
 
 let retryHeaderPath: string | undefined;
@@ -133,6 +135,20 @@ export class QueueImpl implements Queue {
   public clear(): Promise<void> {
     return clear(this.withStore).catch(logError);
   }
+
+  public peek(count = 1): Promise<RetryEntry[]> {
+    return peek<RetryEntry>(count, this.withStore).catch((reason) => {
+      logError(reason);
+      return [];
+    });
+  }
+
+  public peekBack(count = 1): Promise<RetryEntry[]> {
+    return peekBack<RetryEntry>(count, this.withStore).catch((reason) => {
+      logError(reason);
+      return [];
+    });
+  }
 }
 
 class NoopQueue {
@@ -147,6 +163,12 @@ class NoopQueue {
   }
   clear(): Promise<void> {
     return Promise.resolve();
+  }
+  peek(): Promise<RetryEntry[]> {
+    return Promise.resolve([]);
+  }
+  peekBack(): Promise<RetryEntry[]> {
+    return Promise.resolve([]);
   }
 }
 
@@ -170,4 +192,10 @@ export function setRetryQueueConfig(config: RetryQueueConfig): void {
 }
 export function clearQueue(): Promise<void> {
   return retryQueue.clear();
+}
+export function peekQueue(count: number): Promise<RetryEntry[]> {
+  return retryQueue.peek(count);
+}
+export function peekBackQueue(count: number): Promise<RetryEntry[]> {
+  return retryQueue.peekBack(count);
 }
