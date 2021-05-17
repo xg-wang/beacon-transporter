@@ -5,4 +5,10 @@
 
 export { default } from './beacon';
 export * from './interfaces';
-export { clearQueue, setRetryHeaderPath, setRetryQueueConfig } from './queue';
+export {
+  clearQueue,
+  peekQueue,
+  peekBackQueue,
+  setRetryHeaderPath,
+  setRetryQueueConfig,
+} from './queue';
