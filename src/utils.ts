@@ -30,7 +30,7 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export function debug(...data: any[]): void {
-  if (self.__DEBUG_BEACON_TRANSPORTER) {
+  if (typeof window !== 'undefined' && window.__DEBUG_BEACON_TRANSPORTER) {
     console.debug('[beacon-transporter] ', ...data);
   }
 }

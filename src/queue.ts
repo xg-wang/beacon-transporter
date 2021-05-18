@@ -166,7 +166,7 @@ class NoopQueue {
   }
 }
 
-const hasSupport = !!self.indexedDB;
+const hasSupport = !!globalThis.indexedDB;
 const retryQueue = hasSupport ? new QueueImpl() : new NoopQueue();
 
 export function pushToQueue(entry: RetryEntry): void {
