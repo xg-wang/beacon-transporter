@@ -1,6 +1,6 @@
 import { createRequestInit, debug } from './utils';
 
-export const supportFetch = typeof self !== 'undefined' && 'fetch' in self;
+export const supportFetch = typeof globalThis !== 'undefined' && 'fetch' in globalThis;
 
 export const supportKeepaliveFetch =
   supportFetch && 'keepalive' in new Request('');
