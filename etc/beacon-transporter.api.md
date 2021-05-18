@@ -35,6 +35,14 @@ export interface NetworkRetryRejection {
     url: string;
 }
 
+// Warning: (ae-forgotten-export) The symbol "RetryEntry" needs to be exported by the entry point index.d.ts
+//
+// @public (undocumented)
+export function peekBackQueue(count: number): Promise<RetryEntry[]>;
+
+// @public (undocumented)
+export function peekQueue(count: number): Promise<RetryEntry[]>;
+
 // @public (undocumented)
 export interface ResponseRetryRejection {
     // (undocumented)

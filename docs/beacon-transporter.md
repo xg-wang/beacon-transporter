@@ -11,6 +11,8 @@ Reliable beacon API for the browser
 |  Function | Description |
 |  --- | --- |
 |  [clearQueue()](./beacon-transporter.clearqueue.md) |  |
+|  [peekBackQueue(count)](./beacon-transporter.peekbackqueue.md) |  |
+|  [peekQueue(count)](./beacon-transporter.peekqueue.md) |  |
 |  [setRetryHeaderPath(path)](./beacon-transporter.setretryheaderpath.md) |  |
 |  [setRetryQueueConfig(config)](./beacon-transporter.setretryqueueconfig.md) |  |
 
