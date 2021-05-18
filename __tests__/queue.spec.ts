@@ -5,7 +5,11 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
 import type beaconType from '../src/';
-import type { clearQueue, setRetryHeaderPath, setRetryQueueConfig } from '../src/';
+import type {
+  clearQueue,
+  setRetryHeaderPath,
+  setRetryQueueConfig,
+} from '../src/';
 
 declare global {
   interface Window {
@@ -81,6 +85,9 @@ describe.each([
     });
     await page.goto(server.url);
     await page.addScriptTag(script);
+    await page.waitForFunction(
+      () => window.__DEBUG_BEACON_TRANSPORTER === true
+    );
   });
 
   afterEach(async () => {
@@ -273,7 +280,7 @@ describe.each([
           retry: {
             limit: 1,
             persist: true,
-            persistRetryStatusCodes: [429]
+            persistRetryStatusCodes: [429],
           },
         });
         setTimeout(async () => {
@@ -401,6 +408,9 @@ describe.each([
       }
       console.log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
+    await page2.waitForFunction(
+      () => window.__DEBUG_BEACON_TRANSPORTER === true
+    );
     await page2.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
