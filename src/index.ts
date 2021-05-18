@@ -7,8 +7,8 @@ export { default } from './beacon';
 export * from './interfaces';
 export {
   clearQueue,
-  peekQueue,
   peekBackQueue,
+  peekQueue,
   setRetryHeaderPath,
   setRetryQueueConfig,
 } from './queue';
