@@ -1,6 +1,6 @@
 {
   "name": "beacon-transporter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Reliable beacon API for the browser",
   "license": "MIT",
   "author": "Thomas Wang <hi@xgwang.me>",
@@ -21,8 +21,7 @@
     "lint": "npm-run-all lint:*",
     "lint:eslint": "eslint .",
     "lint:tsc-src": "tsc --noEmit",
-    "prepack": "npm run docs",
-    "prepare": "tsc && rollup -c rollup.config.js",
+    "prepare": "tsc && rollup -c rollup.config.js && npm run docs",
     "test": "npm-run-all prepare lint jest",
     "jest": "jest"
   },
