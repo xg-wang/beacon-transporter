@@ -408,6 +408,9 @@ describe.each([
       }
       console.log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
+    await page2.waitForFunction(
+      () => window.__DEBUG_BEACON_TRANSPORTER === true
+    );
     await page2.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');

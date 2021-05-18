@@ -34,17 +34,12 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
+    let pageClosed = false;
     let server: any;
 
     beforeAll(async () => {
       console.log(`Launch ${name}`);
-      browser = await browserType.launch({
-        logger: {
-          isEnabled: (name, severity) => false,
-          log: (name, severity, message, args) =>
-            console.log(`${name} ${message}`),
-        },
-      });
+      browser = await browserType.launch({});
     });
 
     afterAll(async () => {
@@ -53,12 +48,30 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     beforeEach(async () => {
-      context = await browser.newContext({ ignoreHTTPSErrors: true })
+      pageClosed = false;
+      context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
+      server.get('/', (request, response) => {
+        response.end('hello!');
+      });
+      page.on('console', async (msg) => {
+        const msgs = [];
+        for (let i = 0; i < msg.args().length; ++i) {
+          if (pageClosed) break;
+          msgs.push(await msg.args()[i].jsonValue());
+        }
+        console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
+      });
+      await page.goto(server.url);
+      await page.addScriptTag(script);
+      await page.waitForFunction(
+        () => window.__DEBUG_BEACON_TRANSPORTER === true
+      );
     });
 
     afterEach(async () => {
+      pageClosed = true;
       await context.close();
       await server.close();
     });
@@ -66,21 +79,16 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     it('should fetch', async () => {
       const results = [];
       const [serverPromise, serverResolver] = defer();
-      server.get('/', (request, response) => {
-        response.end('hi');
-      });
       server.post('/api', (request, response) => {
         results.push(request.body);
         serverResolver(null);
         response.end('hello');
       });
-      await page.goto(server.sslUrl);
-      await page.addScriptTag(script);
       const [, result] = await Promise.all([
         serverPromise,
         page.evaluate((url) => {
           return window.beacon(`${url}/api`, 'hello');
-        }, server.sslUrl),
+        }, server.url),
       ]);
 
       expect(result).toBeUndefined;
@@ -90,21 +98,16 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     it('should send payload larger than 64kb', async () => {
       const results = [];
       const [serverPromise, serverResolver] = defer();
-      server.get('/', (request, response) => {
-        response.end('hi');
-      });
       server.post('/api', (request, response) => {
         results.push(request.body);
         serverResolver(null);
         response.end('hello');
       });
-      await page.goto(server.sslUrl);
-      await page.addScriptTag(script);
       await Promise.all([
         serverPromise,
         page.evaluate((url) => {
           return window.beacon(`${url}/api`, 's'.repeat(64_100));
-        }, server.sslUrl),
+        }, server.url),
       ]);
 
       expect(results[0].length).toEqual(64_100);
@@ -122,23 +125,18 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       it('should send payload on closing tab', async () => {
         const results = [];
         const [serverPromise, serverResolver] = defer();
-        server.get('/', (request, response) => {
-          response.end('hi');
-        });
         server.post('/api', (request, response) => {
           results.push(request.body);
           serverResolver(null);
           response.end('hello');
         });
-        await page.goto(server.sslUrl);
-        await page.addScriptTag(script);
         await page.evaluate(
           ([url, eventName]) => {
             document.addEventListener(eventName, function () {
               window.beacon(`${url}/api`, 'closing');
             });
           },
-          [server.sslUrl, getCloseTabEvent(name)]
+          [server.url, getCloseTabEvent(name)]
         );
         await Promise.all([
           serverPromise,
@@ -151,22 +149,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
     it('may not send payload larger than 64kb on closing tab', async () => {
       const results = [];
-      server.get('/', (request, response) => {
-        response.end('hi');
-      });
       server.post('/api', (request, response) => {
         results.push(request.body);
         response.end('hello');
       });
-      await page.goto(server.sslUrl);
-      await page.addScriptTag(script);
       await page.evaluate(
         ([url, eventName]) => {
           document.addEventListener(eventName, function () {
             window.beacon(`${url}/api`, 's'.repeat(64_100));
           });
         },
-        [server.sslUrl, getCloseTabEvent(name)]
+        [server.url, getCloseTabEvent(name)]
       );
       await page.close({ runBeforeUnload: true });
 
@@ -174,14 +167,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     it('if not firefox, retry configured times before giving up', async () => {
-      server.get('/', (request, response) => {
-        response.end('hi');
-      });
       server.post('/api', (request, response) => {
         response.end('hello');
       });
-      await page.goto(server.sslUrl);
-      await page.addScriptTag(script);
       let numberOfRetries = 0;
       await page.route('**/api', (route) => {
         numberOfRetries++;
@@ -197,7 +185,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
             retry: { limit: 2 },
           });
         },
-        [server.sslUrl]
+        [server.url]
       );
       await page.waitForTimeout(7000);
       expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (2 + 1) * 2);
@@ -206,9 +194,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     it('retry on server response statusCode', async () => {
       const requests1 = [];
       const requests2 = [];
-      server.get('/', (request, response) => {
-        response.end('hi');
-      });
       server.post('/api/retry', (request, response) => {
         requests1.push(request.body);
         response.sendStatus(502);
@@ -217,8 +202,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         requests2.push(request.body);
         response.sendStatus(503);
       });
-      await page.goto(server.sslUrl);
-      await page.addScriptTag(script);
       await page.evaluate(
         ([url]) => {
           window.beacon(`${url}/api/retry`, 'hi', {
@@ -228,10 +211,10 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
             retry: { limit: 2 },
           });
         },
-        [server.sslUrl]
+        [server.url]
       );
       await page.waitForTimeout(7000);
-      expect(requests1.length).toBe(name === 'firefox' ? 1 : (2 + 1));
+      expect(requests1.length).toBe(name === 'firefox' ? 1 : 2 + 1);
       expect(requests2.length).toBe(name === 'firefox' ? 1 : 1);
     });
   }
