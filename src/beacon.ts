@@ -1,6 +1,6 @@
 import fetchFn, { supportFetch } from './fetch-fn';
 import { BeaconConfig, RetryRejection } from './interfaces';
-import { notifyQueue, pushToQueue } from './queue';
+import { notifyQueue, onClear, pushToQueue, removeOnClear } from './queue';
 import { debug, logError, sleep } from './utils';
 
 /**
@@ -16,6 +16,8 @@ const defaultPersistRetryStatusCodes = [429, 503];
 
 class Beacon {
   private timestamp: number;
+  private isClearQueuePending = false;
+  private onClearCallback: () => void;
   constructor(
     private url: string,
     private body: string,
@@ -23,9 +25,16 @@ class Beacon {
   ) {
     this.timestamp = Date.now();
     const retryCountLeft = config?.retry?.limit ?? 0;
-    this.retry(() => fetchFn(url, body, {}), retryCountLeft).catch((reason) =>
-      logError('Retry finished with rejection: ' + JSON.stringify(reason))
-    );
+    this.onClearCallback = () => (this.isClearQueuePending = true);
+    onClear(this.onClearCallback);
+    this.retry(() => fetchFn(url, body, {}), retryCountLeft)
+      .catch((reason) =>
+        logError('Retry finished with rejection: ' + JSON.stringify(reason))
+      )
+      .finally(() => {
+        debug('beacon finished');
+        removeOnClear(this.onClearCallback);
+      });
   }
 
   /**
@@ -83,8 +92,7 @@ class Beacon {
   }
 
   private shouldPersist(error: RetryRejection): boolean {
-    const configEnabled = this.config?.retry?.persist;
-    if (!configEnabled) {
+    if (this.isClearQueuePending || !this.config?.retry?.persist) {
       return false;
     }
     if (error.type === 'network' || !navigator.onLine) {
