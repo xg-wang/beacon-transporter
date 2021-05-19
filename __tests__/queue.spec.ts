@@ -10,7 +10,7 @@ import type {
   setRetryHeaderPath,
   setRetryQueueConfig,
 } from '../src/';
-import type { RetryEntry } from '../src/queue';
+import type { peekQueue, RetryEntry } from '../src/queue';
 
 declare global {
   interface Window {
@@ -18,6 +18,7 @@ declare global {
     clearQueue: typeof clearQueue;
     setRetryHeaderPath: typeof setRetryHeaderPath;
     setRetryQueueConfig: typeof setRetryQueueConfig;
+    peekQueue: typeof peekQueue;
   }
 }
 
@@ -452,6 +453,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
+    await page.waitForTimeout(1000);
     const storage = await page.evaluate<RetryEntry[]>(`window.peekQueue(1)`);
     expect(storage.length).toBe(1);
 
@@ -469,6 +471,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
+    await page.waitForTimeout(1000);
 
     const storageAfterClear = await page.evaluate<RetryEntry[]>(
       `window.peekQueue(1)`
