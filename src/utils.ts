@@ -36,5 +36,7 @@ export function debug(...data: any[]): void {
 }
 
 export function logError(...data: any[]): void {
-  console.error('[beacon-transporter] ', ...data);
+  if (typeof window !== 'undefined' && window.__DEBUG_BEACON_TRANSPORTER) {
+    console.error('[beacon-transporter] ', ...data);
+  }
 }

@@ -1,4 +1,4 @@
-import { createRequestInit, debug } from './utils';
+import { createRequestInit } from './utils';
 
 export const supportFetch = typeof globalThis !== 'undefined' && 'fetch' in globalThis;
 
@@ -17,7 +17,6 @@ function keepaliveFetch(
     fetch(url, createRequestInit({ body, keepalive: true, headers }))
       .catch(() => {
         // keepalive true fetch can throw error if body exceeds 64kb
-        debug('fetch failed 1st');
         return fetch(
           url,
           createRequestInit({ body, keepalive: false, headers })
@@ -52,7 +51,6 @@ function fallbackFetch(
       // if the user agent is not able to successfully queue the data for transfer,
       // send the payload with fetch api instead
       if (result) {
-        debug(`sendBeacon passed, body length: ${body.length}`);
         resolve(null);
         return;
       }

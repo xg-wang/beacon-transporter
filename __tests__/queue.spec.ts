@@ -10,6 +10,7 @@ import type {
   setRetryHeaderPath,
   setRetryQueueConfig,
 } from '../src/';
+import type { RetryEntry } from '../src/queue';
 
 declare global {
   interface Window {
@@ -33,6 +34,7 @@ ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
 window.beacon = beacon;
 window.__DEBUG_BEACON_TRANSPORTER = true;
 window.clearQueue = clearQueue;
+window.peekQueue = peekQueue;
 window.setRetryHeaderPath = setRetryHeaderPath;
 window.setRetryQueueConfig = setRetryQueueConfig;
 `,
@@ -434,5 +436,43 @@ describe.each([
     expect(results.length).toBe(3);
     expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
     await page2.close();
+  });
+
+  it('sequential retry which writes to db do not race with clear', async () => {
+    server.post('/api/:status', ({ params }, res) => {
+      const status = +params.status;
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        window.beacon(`${url}/api/429`, bodyPayload, {
+          retry: { limit: 0, persist: true },
+        });
+      },
+      [server.url, createBody(contentLength)]
+    );
+    const storage = await page.evaluate<RetryEntry[]>(`window.peekQueue(1)`);
+    expect(storage.length).toBe(1);
+
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        return Promise.all([
+          window.beacon(`${url}/api/429`, bodyPayload, {
+            retry: { limit: 0, persist: true },
+          }),
+          window.beacon(`${url}/api/429`, bodyPayload, {
+            retry: { limit: 0, persist: true },
+          }),
+          window.clearQueue(),
+        ]);
+      },
+      [server.url, createBody(contentLength)]
+    );
+
+    const storageAfterClear = await page.evaluate<RetryEntry[]>(
+      `window.peekQueue(1)`
+    );
+    expect(storageAfterClear.length).toBe(0);
   });
 });

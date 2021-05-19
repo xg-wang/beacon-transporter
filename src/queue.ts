@@ -1,4 +1,11 @@
-import { clear, createStore, peek, peekBack, push, shift } from 'idb-queue';
+import {
+  clear,
+  createStore,
+  peek,
+  peekBack,
+  pushIfNotClearing,
+  shift,
+} from 'idb-queue';
 
 import fetchFn from './fetch-fn';
 import { debug, logError } from './utils';
@@ -52,7 +59,7 @@ function throttle(fn: () => void, timeFrame: number): () => void {
   return function () {
     const now = Date.now();
     if (now - lastTime > timeFrame) {
-      debug('[throttle] Run fn()');
+      debug('[throttle] Run fn() at ' + String(now));
       fn();
       lastTime = now;
     }
@@ -79,10 +86,10 @@ export class QueueImpl implements Queue {
   }
 
   private replayEntries(): void {
-    debug('Replaying entry');
+    debug('Replaying entry: shift from store');
     shift<RetryEntryWithAttempt>(1, this.withStore)
       .then((entries) => {
-        debug(`Replaying entry: ${entries.length}`);
+        debug(`Replaying entry: read ${entries.length} entry`);
         if (entries.length > 0) {
           const { url, body, timestamp, statusCode, attemptCount } = entries[0];
           return fetchFn(url, body, createHeaders(attemptCount, statusCode))
@@ -90,7 +97,7 @@ export class QueueImpl implements Queue {
             .catch(() => {
               if (attemptCount + 1 >= retryQueueConfig.attemptLimit) {
                 debug(
-                  'Exceeded attempt count',
+                  'Exceeded attempt count, pushing the entry back to store',
                   JSON.stringify(
                     {
                       url,
@@ -103,7 +110,7 @@ export class QueueImpl implements Queue {
                 );
                 return;
               }
-              return push(
+              return pushIfNotClearing(
                 {
                   url,
                   body,
@@ -129,7 +136,9 @@ export class QueueImpl implements Queue {
       attemptCount: 0,
     };
     debug('Persisting to DB ' + entry.url);
-    push(entryWithAttempt, retryQueueConfig, this.withStore).catch(logError);
+    pushIfNotClearing(entryWithAttempt, retryQueueConfig, this.withStore)
+      .then(() => debug('push completed'))
+      .catch(logError);
   }
 
   public clear(): Promise<void> {
@@ -166,6 +175,17 @@ class NoopQueue {
   }
 }
 
+const beaconListeners = new Set<() => void>();
+/**
+  * @internal
+  */
+export function onClear(cb: () => void): void {
+  beaconListeners.add(cb);
+}
+export function removeOnClear(cb: () => void): void {
+  beaconListeners.delete(cb);
+}
+
 const hasSupport = !!globalThis.indexedDB;
 const retryQueue = hasSupport ? new QueueImpl() : new NoopQueue();
 
@@ -177,7 +197,6 @@ export function notifyQueue(): void {
 }
 
 export function setRetryHeaderPath(path: string): void {
-  debug('Set retry header path to ', path);
   retryHeaderPath = path;
 }
 export function setRetryQueueConfig(config: RetryQueueConfig): void {
@@ -185,6 +204,7 @@ export function setRetryQueueConfig(config: RetryQueueConfig): void {
   retryQueue.setThrottleWait(config.throttleWait);
 }
 export function clearQueue(): Promise<void> {
+  beaconListeners.forEach((cb) => cb());
   return retryQueue.clear();
 }
 export function peekQueue(count: number): Promise<RetryEntry[]> {
