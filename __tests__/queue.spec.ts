@@ -145,6 +145,51 @@ describe.each([
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
   });
 
+  it('retry with reading IDB skipped if retry.persist=false', async () => {
+    const [serverPromise, resolver] = defer();
+    const results = [];
+    let serverCount = 0;
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = { status, header: headers['x-retry-context'] };
+      results.push(payload);
+      console.log(`Received ${++serverCount} request`, payload);
+      if (serverCount === 2) {
+        resolver(null);
+      }
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        window.setRetryHeaderPath('x-retry-context');
+        window.setRetryQueueConfig({
+          attemptLimit: 2,
+          maxNumber: 10,
+          batchEvictionNumber: 3,
+          throttleWait: 2000,
+        });
+        window.beacon(`${url}/api/429`, bodyPayload, {
+          retry: { limit: 0, persist: true },
+        });
+        setTimeout(() => {
+          window.beacon(`${url}/api/200`, bodyPayload, {
+            retry: { limit: 0, persist: false},
+          });
+        }, 1000);
+      },
+      [server.url, createBody(contentLength)]
+    );
+    await serverPromise;
+    expect(results.length).toBe(2);
+    await page.waitForTimeout(1000);
+    // There is no retry from idb
+    expect(results.length).toBe(2);
+    expect(results[0].status).toBe(429);
+    expect(results[0].header).toBeUndefined;
+    expect(results[1].status).toBe(200);
+  });
+
   it('retry with reading IDB is throttled with every successful response', async () => {
     const [serverPromise, resolver] = defer();
     const results = [];
@@ -426,6 +471,7 @@ describe.each([
         window.beacon(`${url}/api/200`, bodyPayload, {
           retry: {
             limit: 0,
+            persist: true,
           },
         });
       },

@@ -68,7 +68,9 @@ class Beacon {
         throw error;
       })
       .then(() => {
-        notifyQueue();
+        if (!this.isClearQueuePending && this.config?.retry?.persist) {
+          notifyQueue();
+        }
         return true;
       });
   }
