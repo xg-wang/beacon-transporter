@@ -186,7 +186,7 @@ export function removeOnClear(cb: () => void): void {
   beaconListeners.delete(cb);
 }
 
-const hasSupport = !!globalThis.indexedDB;
+const hasSupport = typeof globalThis !== 'undefined' && !!globalThis.indexedDB;
 const retryQueue = hasSupport ? new QueueImpl() : new NoopQueue();
 
 export function pushToQueue(entry: RetryEntry): void {
