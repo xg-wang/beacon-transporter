@@ -18,6 +18,8 @@ class Beacon {
   private timestamp: number;
   private isClearQueuePending = false;
   private onClearCallback: () => void;
+  private calculateRetryDelay: (countLeft: number) => number;
+
   constructor(
     private url: string,
     private body: string,
@@ -27,6 +29,9 @@ class Beacon {
     const retryCountLeft = config?.retry?.limit ?? 0;
     this.onClearCallback = () => (this.isClearQueuePending = true);
     onClear(this.onClearCallback);
+    this.calculateRetryDelay =
+      config?.retry?.calculateRetryDelay ??
+      ((countLeft) => ((config?.retry?.limit ?? 0) - countLeft + 1) * 2000);
     this.retry(() => fetchFn(url, body, {}), retryCountLeft)
       .catch((reason) =>
         logError('Retry finished with rejection: ' + JSON.stringify(reason))
@@ -61,7 +66,7 @@ class Beacon {
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(error)) {
           debug('in memory retry');
-          return sleep(this.getRetryDelay(retryCountLeft)).then(() =>
+          return sleep(this.calculateRetryDelay(retryCountLeft)).then(() =>
             this.retry(fn, retryCountLeft - 1)
           );
         }
@@ -75,7 +80,7 @@ class Beacon {
       });
   }
 
-  private getRetryDelay(countLeft: number): number {
+  private defaultCalculateRetryDelay(countLeft: number): number {
     const count = (this.config?.retry?.limit ?? 0) - countLeft + 1;
     return count * 2000;
   }

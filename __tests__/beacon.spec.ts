@@ -217,6 +217,28 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       expect(requests1.length).toBe(name === 'firefox' ? 1 : 2 + 1);
       expect(requests2.length).toBe(1);
     });
+
+    it('can customize retry delay', async () => {
+      const requests = [];
+      server.post('/api/retry', (request, response) => {
+        requests.push(request.body);
+        response.sendStatus(502);
+      });
+      await page.evaluate(
+        ([url]) => {
+          window.beacon(`${url}/api/retry`, 'hi', {
+            retry: { limit: 2, inMemoryRetryStatusCodes: [502], calculateRetryDelay: (countLeft) => countLeft === 2 ? 1 : 2000 },
+          });
+        },
+        [server.url]
+      );
+      await page.waitForTimeout(100);
+      expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
+      await page.waitForTimeout(1900);
+      expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
+      await page.waitForTimeout(100);
+      expect(requests.length).toBe(name === 'firefox' ? 1 : 3);
+    })
   }
 );
 
