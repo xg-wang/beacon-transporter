@@ -99,7 +99,7 @@ describe.each([
     await server.close();
   });
 
-  it('stores beacon data if network having issue, retry on next successful response', async () => {
+  it('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
     const [serverPromise, resolver] = defer();
     const results = [];
     let serverCount = 0;
@@ -117,7 +117,7 @@ describe.each([
     let numberOfBeacons = 0;
     await page.route('**/api/*', (route) => {
       // fetch will fallback to keepalive false and try 2nd time
-      if (++numberOfBeacons >= (contentLength === '>64kb' ? 2 : 3)) {
+      if (++numberOfBeacons > (contentLength === '>64kb' ? 3 : 2 * 3)) {
         console.log('Continue route request');
         return route.continue();
       } else {
@@ -129,18 +129,18 @@ describe.each([
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
         window.beacon(`${url}/api/200`, bodyPayload, {
-          retry: { limit: 0, persist: true },
+          retry: { limit: 2, persist: true },
         });
         setTimeout(() => {
           window.beacon(`${url}/api/200`, bodyPayload, {
             retry: { limit: 0, persist: true },
           });
-        }, 1000);
+        }, 2000 + 4000 + 500);
       },
       [server.url, createBody(contentLength)]
     );
     await serverPromise;
-    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 : 4);
+    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : (2 * 3) + 2);
     expect(results.length).toBe(2);
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
   });

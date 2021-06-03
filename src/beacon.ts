@@ -51,7 +51,7 @@ class Beacon {
     return fn()
       .catch((error: RetryRejection) => {
         debug('retry rejected', JSON.stringify(error));
-        if (this.shouldPersist(error)) {
+        if (this.shouldPersist(retryCountLeft, error)) {
           debug('push entry to db');
           pushToQueue({
             url: this.url,
@@ -93,11 +93,18 @@ class Beacon {
     return false;
   }
 
-  private shouldPersist(error: RetryRejection): boolean {
+  private shouldPersist(
+    retryCountLeft: number,
+    error: RetryRejection
+  ): boolean {
     if (this.isClearQueuePending || !this.config?.retry?.persist) {
       return false;
     }
-    if (error.type === 'network' || !navigator.onLine) {
+    // Short-circuit if apparently offline or all back-off retries fail
+    if (
+      !navigator.onLine ||
+      (retryCountLeft === 0 && error.type === 'network')
+    ) {
       return true;
     }
     const fromStatusCode =
