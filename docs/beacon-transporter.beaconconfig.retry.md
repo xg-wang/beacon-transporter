@@ -12,5 +12,6 @@ retry?: {
         inMemoryRetryStatusCodes?: number[];
         persist?: boolean;
         persistRetryStatusCodes?: number[];
+        calculateRetryDelay?: (countLeft: number) => number;
     };
 ```
