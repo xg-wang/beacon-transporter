@@ -234,9 +234,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       );
       await page.waitForTimeout(100);
       expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
-      await page.waitForTimeout(1900);
+      await page.waitForTimeout(1800);
       expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(200);
       expect(requests.length).toBe(name === 'firefox' ? 1 : 3);
     })
   }
