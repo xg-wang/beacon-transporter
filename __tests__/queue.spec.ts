@@ -60,6 +60,11 @@ describe.each([
   let pageClosedForConsoleLog = false;
   let server: any;
 
+  function closePage(page: Page): Promise<void> {
+    pageClosedForConsoleLog = true;
+    return page.close({ runBeforeUnload: true });
+  }
+
   beforeAll(async () => {
     console.log(`Launch ${browserName}`);
     browser = await browserType.launch({});
@@ -71,6 +76,7 @@ describe.each([
   });
 
   beforeEach(async () => {
+    console.log(expect.getState().currentTestName);
     pageClosedForConsoleLog = false;
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
@@ -140,7 +146,7 @@ describe.each([
       [server.url, createBody(contentLength)]
     );
     await serverPromise;
-    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : (2 * 3) + 2);
+    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : 2 * 3 + 2);
     expect(results.length).toBe(2);
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 0 }));
   });
@@ -174,7 +180,7 @@ describe.each([
         });
         setTimeout(() => {
           window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: false},
+            retry: { limit: 0, persist: false },
           });
         }, 1000);
       },
@@ -401,12 +407,7 @@ describe.each([
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(6);
     expect(results.map((r) => r.status)).toEqual([
-      429,
-      200,
-      429,
-      200,
-      429,
-      200,
+      429, 200, 429, 200, 429, 200,
     ]);
   });
 
@@ -479,10 +480,10 @@ describe.each([
     );
 
     await serverPromise;
-    await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+    await page2.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
     expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
-    await page2.close();
+    await closePage(page2);
   });
 
   it('sequential retry which writes to db do not race with clear', async () => {
