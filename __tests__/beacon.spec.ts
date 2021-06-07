@@ -34,7 +34,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
-    let pageClosed = false;
+    let pageClosedFlagForConsoleLog = false;
     let server: any;
 
     beforeAll(async () => {
@@ -48,7 +48,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     beforeEach(async () => {
-      pageClosed = false;
+      pageClosedFlagForConsoleLog = false;
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
@@ -58,7 +58,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       page.on('console', async (msg) => {
         const msgs = [];
         for (let i = 0; i < msg.args().length; ++i) {
-          if (pageClosed) break;
+          if (pageClosedFlagForConsoleLog) break;
           msgs.push(await msg.args()[i].jsonValue());
         }
         console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
@@ -71,7 +71,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     afterEach(async () => {
-      pageClosed = true;
+      pageClosedFlagForConsoleLog = true;
       await context.close();
       await server.close();
     });
@@ -138,6 +138,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           },
           [server.url, getCloseTabEvent(name)]
         );
+        pageClosedFlagForConsoleLog = true;
         await Promise.all([
           serverPromise,
           page.close({ runBeforeUnload: true }),
@@ -161,6 +162,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url, getCloseTabEvent(name)]
       );
+      pageClosedFlagForConsoleLog = true;
       await page.close({ runBeforeUnload: true });
 
       expect(results.length).toBeLessThanOrEqual(1);

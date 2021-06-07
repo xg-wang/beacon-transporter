@@ -57,7 +57,7 @@ describe.each([
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
-  let pageClosed = false;
+  let pageClosedForConsoleLog = false;
   let server: any;
 
   beforeAll(async () => {
@@ -71,7 +71,7 @@ describe.each([
   });
 
   beforeEach(async () => {
-    pageClosed = false;
+    pageClosedForConsoleLog = false;
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
     server = await createTestServer();
@@ -81,7 +81,7 @@ describe.each([
     page.on('console', async (msg) => {
       const msgs = [];
       for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosed) break;
+        if (pageClosedForConsoleLog) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
       console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
@@ -94,7 +94,7 @@ describe.each([
   });
 
   afterEach(async () => {
-    pageClosed = true;
+    pageClosedForConsoleLog = true;
     await context.close();
     await server.close();
   });
@@ -451,7 +451,7 @@ describe.each([
     page2.on('console', async (msg) => {
       const msgs = [];
       for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosed) break;
+        if (pageClosedForConsoleLog) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
       console.log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
