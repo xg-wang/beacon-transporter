@@ -34,8 +34,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
-    let pageClosedFlagForConsoleLog = false;
+    let pageClosedForConsoleLog = false;
     let server: any;
+
+    function closePage(page: Page): Promise<void> {
+      pageClosedForConsoleLog = true;
+      return page.close({ runBeforeUnload: true });
+    }
 
     beforeAll(async () => {
       console.log(`Launch ${name}`);
@@ -48,7 +53,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     beforeEach(async () => {
-      pageClosedFlagForConsoleLog = false;
+      console.log(expect.getState().currentTestName);
+      pageClosedForConsoleLog = false;
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
@@ -58,7 +64,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       page.on('console', async (msg) => {
         const msgs = [];
         for (let i = 0; i < msg.args().length; ++i) {
-          if (pageClosedFlagForConsoleLog) break;
+          if (pageClosedForConsoleLog) break;
           msgs.push(await msg.args()[i].jsonValue());
         }
         console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
@@ -71,7 +77,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     afterEach(async () => {
-      pageClosedFlagForConsoleLog = true;
+      pageClosedForConsoleLog = true;
       await context.close();
       await server.close();
     });
@@ -138,11 +144,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           },
           [server.url, getCloseTabEvent(name)]
         );
-        pageClosedFlagForConsoleLog = true;
-        await Promise.all([
-          serverPromise,
-          page.close({ runBeforeUnload: true }),
-        ]);
+        pageClosedForConsoleLog = true;
+        await Promise.all([serverPromise, closePage(page)]);
 
         expect(results).toEqual(['closing']);
       });
@@ -162,8 +165,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url, getCloseTabEvent(name)]
       );
-      pageClosedFlagForConsoleLog = true;
-      await page.close({ runBeforeUnload: true });
+      pageClosedForConsoleLog = true;
+      await closePage(page);
 
       expect(results.length).toBeLessThanOrEqual(1);
     });
@@ -229,7 +232,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url]) => {
           window.beacon(`${url}/api/retry`, 'hi', {
-            retry: { limit: 2, inMemoryRetryStatusCodes: [502], calculateRetryDelay: (countLeft) => countLeft === 2 ? 1 : 2000 },
+            retry: {
+              limit: 2,
+              inMemoryRetryStatusCodes: [502],
+              calculateRetryDelay: (countLeft) => (countLeft === 2 ? 1 : 2000),
+            },
           });
         },
         [server.url]
@@ -240,7 +247,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
       await page.waitForTimeout(200);
       expect(requests.length).toBe(name === 'firefox' ? 1 : 3);
-    })
+    });
   }
 );
 
