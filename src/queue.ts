@@ -95,7 +95,7 @@ export class QueueImpl implements Queue {
           return fetchFn(url, body, createHeaders(attemptCount, statusCode))
             .then(() => this.replayEntries())
             .catch(() => {
-              if (attemptCount + 1 >= retryQueueConfig.attemptLimit) {
+              if (attemptCount + 1 > retryQueueConfig.attemptLimit) {
                 debug(
                   'Exceeded attempt count, pushing the entry back to store',
                   JSON.stringify(
@@ -133,7 +133,7 @@ export class QueueImpl implements Queue {
   public push(entry: RetryEntry): void {
     const entryWithAttempt: RetryEntryWithAttempt = {
       ...entry,
-      attemptCount: 0,
+      attemptCount: 1,
     };
     debug('Persisting to DB ' + entry.url);
     pushIfNotClearing(entryWithAttempt, retryQueueConfig, this.withStore)
