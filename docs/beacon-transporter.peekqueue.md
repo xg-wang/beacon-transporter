@@ -4,6 +4,7 @@
 
 ## peekQueue() function
 
+
 <b>Signature:</b>
 
 ```typescript

@@ -9,6 +9,6 @@ export {
   clearQueue,
   peekBackQueue,
   peekQueue,
-  setRetryHeaderPath,
   setRetryQueueConfig,
 } from './queue';
+export { setRetryHeaderPath } from './utils';

@@ -4,6 +4,7 @@
 
 ## clearQueue() function
 
+
 <b>Signature:</b>
 
 ```typescript

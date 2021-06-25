@@ -5,10 +5,12 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
 import type beaconType from '../src/';
+import { setRetryHeaderPath } from '../src/';
 
 declare global {
   interface Window {
     beacon: typeof beaconType;
+    setRetryHeaderPath: typeof setRetryHeaderPath;
   }
 }
 
@@ -24,6 +26,7 @@ const script = {
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
 self.beacon = beacon;
 self.__DEBUG_BEACON_TRANSPORTER = true;
+self.setRetryHeaderPath = setRetryHeaderPath;
 `,
 };
 
@@ -199,16 +202,21 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     it('retry on server response statusCode', async () => {
       const requests1 = [];
       const requests2 = [];
-      server.post('/api/retry', (request, response) => {
-        requests1.push(request.body);
-        response.sendStatus(502);
+      server.post('/api/retry', ({ headers }, res) => {
+        requests1.push({
+          header: headers['x-retry-context'],
+        });
+        res.sendStatus(502);
       });
-      server.post('/api/noretry', (request, response) => {
-        requests2.push(request.body);
-        response.sendStatus(503);
+      server.post('/api/noretry', ({ headers }, res) => {
+        requests2.push({
+          header: headers['x-retry-context'],
+        });
+        res.sendStatus(503);
       });
       await page.evaluate(
         ([url]) => {
+          window.setRetryHeaderPath('x-retry-context');
           window.beacon(`${url}/api/retry`, 'hi', {
             retry: { limit: 2, inMemoryRetryStatusCodes: [502] },
           });
@@ -219,7 +227,19 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         [server.url]
       );
       await page.waitForTimeout(7000);
-      expect(requests1.length).toBe(name === 'firefox' ? 1 : 2 + 1);
+      if (name !== 'firefox') {
+        expect(requests1.length).toBe(2 + 1);
+        expect(requests1).toEqual(
+          [
+            { header: undefined },
+            { header: JSON.stringify({ attempt: 1, errorCode: 502 }) },
+            { header: JSON.stringify({ attempt: 2, errorCode: 502 }) }
+          ]
+        );
+      } else {
+        expect(requests1.length).toBe(1);
+        expect(requests1[0]).toEqual({ header: undefined });
+      }
       expect(requests2.length).toBe(1);
     });
 
@@ -242,11 +262,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         [server.url]
       );
       await page.waitForTimeout(100);
-      expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
+      expect(requests.length).toEqual(name === 'firefox' ? 1 : 2);
       await page.waitForTimeout(1800);
-      expect(requests.length).toBe(name === 'firefox' ? 1 : 2);
+      expect(requests.length).toEqual(name === 'firefox' ? 1 : 2);
       await page.waitForTimeout(200);
-      expect(requests.length).toBe(name === 'firefox' ? 1 : 3);
+      expect(requests.length).toEqual(name === 'firefox' ? 1 : 3);
     });
   }
 );

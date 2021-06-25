@@ -148,7 +148,8 @@ describe.each([
     await serverPromise;
     expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : 2 * 3 + 2);
     expect(results.length).toBe(2);
-    expect(results[1].header).toEqual(JSON.stringify({ attempt: 1 }));
+    // attempt count includes in-memory attempts
+    expect(results[1].header).toEqual(JSON.stringify({ attempt: 3 }));
   });
 
   it('retry with reading IDB skipped if retry.persist=false', async () => {

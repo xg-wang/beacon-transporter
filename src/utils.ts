@@ -4,6 +4,26 @@ declare global {
   }
 }
 
+let retryHeaderPath: string | undefined;
+
+/**
+  * @public
+  */
+export function setRetryHeaderPath(path: string): void {
+  retryHeaderPath = path;
+}
+
+export function createHeaders(attempt: number, errorCode?: number): HeadersInit {
+  if (!retryHeaderPath || attempt < 1) return {};
+  const headersInit = {
+    [retryHeaderPath]: JSON.stringify({ attempt, errorCode }),
+  };
+  return headersInit;
+}
+
+/**
+  * @public
+  */
 export function createRequestInit({
   body,
   keepalive,
