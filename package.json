@@ -4,6 +4,11 @@
   "description": "Reliable beacon API for the browser",
   "license": "MIT",
   "author": "Thomas Wang <hi@xgwang.me>",
+  "homepage": "https://github.com/xg-wang/beacon-transporter#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xg-wang/beacon-transporter.git"
+  },
   "files": [
     "src",
     "dist",
