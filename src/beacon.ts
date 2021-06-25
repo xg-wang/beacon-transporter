@@ -67,7 +67,7 @@ class Beacon {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(createHeaders(attemptCount, errorCode))
       .catch((error: RetryRejection) => {
-        debug('retry rejected', JSON.stringify(error));
+        debug('retry rejected ' + JSON.stringify(error));
         if (this.shouldPersist(retryCountLeft, error)) {
           debug('push entry to db');
           pushToQueue({

@@ -1,3 +1,6 @@
+/**
+ * @public
+ */
 export interface BeaconConfig {
   retry?: {
     limit: number;
@@ -8,17 +11,27 @@ export interface BeaconConfig {
   };
 }
 
+/**
+ * @public
+ */
 export interface NetworkRetryRejection {
   type: 'network';
   statusCode: undefined;
   url: string;
   body: string;
 }
+
+/**
+ * @public
+ */
 export interface ResponseRetryRejection {
   type: 'response';
   statusCode: number;
   url: string;
   body: string;
 }
-export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
+/**
+ * @public
+ */
+export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;

@@ -11,6 +11,8 @@ import type {
   setRetryQueueConfig,
 } from '../src/';
 import type { peekQueue, RetryEntry } from '../src/queue';
+import { sleep } from '../src/utils';
+import { log } from './utils';
 
 declare global {
   interface Window {
@@ -66,17 +68,17 @@ describe.each([
   }
 
   beforeAll(async () => {
-    console.log(`Launch ${browserName}`);
+    log(`Launch ${browserName}`);
     browser = await browserType.launch({});
   });
 
   afterAll(async () => {
-    console.log(`Close ${browserName}`);
+    log(`Close ${browserName}`);
     await browser.close();
   });
 
   beforeEach(async () => {
-    console.log(expect.getState().currentTestName);
+    log(expect.getState().currentTestName);
     pageClosedForConsoleLog = false;
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
@@ -90,7 +92,7 @@ describe.each([
         if (pageClosedForConsoleLog) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
-      console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
+      log(`[console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page.goto(server.url);
     await page.addScriptTag(script);
@@ -113,7 +115,7 @@ describe.each([
       const status = +params.status;
       const payload = { header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 2) {
         resolver(null);
       }
@@ -124,10 +126,10 @@ describe.each([
     await page.route('**/api/*', (route) => {
       // fetch will fallback to keepalive false and try 2nd time
       if (++numberOfBeacons > (contentLength === '>64kb' ? 3 : 2 * 3)) {
-        console.log('Continue route request');
+        log('Continue route request');
         return route.continue();
       } else {
-        console.log('Abort route request');
+        log('Abort route request');
         return route.abort();
       }
     });
@@ -160,7 +162,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 2) {
         resolver(null);
       }
@@ -187,7 +189,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await Promise.race([serverPromise, sleep(3000)]);
     expect(results.length).toBe(2);
     await page.waitForTimeout(1000);
     // There is no retry from idb
@@ -205,7 +207,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 6) {
         resolver(null);
       }
@@ -245,7 +247,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await Promise.race([serverPromise, sleep(10000)]);
     expect(results.length).toBe(6);
     expect(results[0].status).toBe(429);
     expect(results[0].header).toBeUndefined;
@@ -266,7 +268,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 3) {
         resolver(null);
       }
@@ -297,7 +299,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await Promise.race([serverPromise, sleep(10000)]);
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
     expect(results[0].status).toBe(502);
@@ -315,7 +317,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 2) {
         resolver(null);
       }
@@ -347,7 +349,7 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await Promise.race([serverPromise, sleep(10000)]);
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(2);
     expect(results[0].status).toBe(429);
@@ -363,7 +365,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 6) {
         resolver(null);
       }
@@ -404,11 +406,16 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await Promise.race([serverPromise, sleep(10000)]);
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(6);
     expect(results.map((r) => r.status)).toEqual([
-      429, 200, 429, 200, 429, 200,
+      429,
+      200,
+      429,
+      200,
+      429,
+      200,
     ]);
   });
 
@@ -420,7 +427,7 @@ describe.each([
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      console.log(`Received ${++serverCount} request`, payload);
+      log(`Received ${++serverCount} request`, payload);
       if (serverCount === 3) {
         resolver(null);
       }
@@ -456,7 +463,7 @@ describe.each([
         if (pageClosedForConsoleLog) break;
         msgs.push(await msg.args()[i].jsonValue());
       }
-      console.log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
+      log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.waitForFunction(
       () => window.__DEBUG_BEACON_TRANSPORTER === true
