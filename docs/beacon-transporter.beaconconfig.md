@@ -4,6 +4,7 @@
 
 ## BeaconConfig interface
 
+
 <b>Signature:</b>
 
 ```typescript

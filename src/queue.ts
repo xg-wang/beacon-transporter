@@ -79,7 +79,6 @@ export class QueueImpl implements Queue {
     debug('Replaying entry: shift from store');
     shift<RetryEntry>(1, this.withStore)
       .then((entries) => {
-        debug(`Replaying entry: read ${entries.length} entry`);
         if (entries.length > 0) {
           const { url, body, timestamp, statusCode, attemptCount } = entries[0];
           return fetchFn(url, body, createHeaders(attemptCount, statusCode))
@@ -117,8 +116,10 @@ export class QueueImpl implements Queue {
             });
         }
       })
-      .catch((reason) => {
-        logError(JSON.stringify(reason));
+      .catch((reason: DOMException) => {
+        if (reason && reason.message) {
+          logError(`Replay entry failed: ${reason.message}`);
+        }
       });
   }
 
@@ -127,7 +128,7 @@ export class QueueImpl implements Queue {
     debug('Persisting to DB ' + entry.url);
     pushIfNotClearing(entry, retryQueueConfig, this.withStore)
       .then(() => debug('push completed'))
-      .catch(logError);
+      .catch(() => logError('push failed'));
   }
 
   public clear(): Promise<void> {

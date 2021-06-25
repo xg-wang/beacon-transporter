@@ -35,14 +35,10 @@ class Beacon {
     this.retry(
       (headers: HeadersInit) => fetchFn(url, body, headers),
       initialRetryCountLeft
-    )
-      .catch((reason) =>
-        logError('Retry finished with rejection: ' + JSON.stringify(reason))
-      )
-      .finally(() => {
-        debug('beacon finished');
-        removeOnClear(this.onClearCallback);
-      });
+    ).finally(() => {
+      debug('beacon finished');
+      removeOnClear(this.onClearCallback);
+    });
   }
 
   private get retryLimit(): number {
@@ -69,7 +65,6 @@ class Beacon {
       .catch((error: RetryRejection) => {
         debug('retry rejected ' + JSON.stringify(error));
         if (this.shouldPersist(retryCountLeft, error)) {
-          debug('push entry to db');
           pushToQueue({
             url: this.url,
             body: this.body,
@@ -78,8 +73,9 @@ class Beacon {
             attemptCount: this.getAttemptCount(retryCountLeft),
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(error)) {
-          debug('in memory retry');
-          return sleep(this.calculateRetryDelay(retryCountLeft)).then(() =>
+          const waitMs = this.calculateRetryDelay(retryCountLeft);
+          debug(`in memory retry in ${waitMs}ms`);
+          return sleep(waitMs).then(() =>
             this.retry(fn, retryCountLeft - 1, error.statusCode)
           );
         }
