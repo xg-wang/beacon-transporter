@@ -4,6 +4,7 @@
 
 ## NetworkRetryRejection interface
 
+
 <b>Signature:</b>
 
 ```typescript
