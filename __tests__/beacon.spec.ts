@@ -6,6 +6,7 @@ import playwright from 'playwright';
 
 import type beaconType from '../src/';
 import { setRetryHeaderPath } from '../src/';
+import { log } from './utils';
 
 declare global {
   interface Window {
@@ -46,17 +47,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     }
 
     beforeAll(async () => {
-      console.log(`Launch ${name}`);
+      log(`Launch ${name}`);
       browser = await browserType.launch({});
     });
 
     afterAll(async () => {
-      console.log(`Close ${name}`);
+      log(`Close ${name}`);
       await browser.close();
     });
 
     beforeEach(async () => {
-      console.log(expect.getState().currentTestName);
+      log(expect.getState().currentTestName);
       pageClosedForConsoleLog = false;
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
@@ -70,7 +71,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           if (pageClosedForConsoleLog) break;
           msgs.push(await msg.args()[i].jsonValue());
         }
-        console.log(`[console.${msg.type()}]\t=> ${msg.text()}`);
+        log(`[console.${msg.type()}]\t=> ${msg.text()}`);
       });
       await page.goto(server.url);
       await page.addScriptTag(script);
@@ -185,7 +186,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       });
       // page.on('console', async (msg) => {
       //   for (let i = 0; i < msg.args().length; ++i)
-      //     console.log(`${i}: ${await msg.args()[i].jsonValue()}`);
+      //     log(`${i}: ${await msg.args()[i].jsonValue()}`);
       // });
       await page.evaluate(
         ([url]) => {
@@ -229,13 +230,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.waitForTimeout(7000);
       if (name !== 'firefox') {
         expect(requests1.length).toBe(2 + 1);
-        expect(requests1).toEqual(
-          [
-            { header: undefined },
-            { header: JSON.stringify({ attempt: 1, errorCode: 502 }) },
-            { header: JSON.stringify({ attempt: 2, errorCode: 502 }) }
-          ]
-        );
+        expect(requests1).toEqual([
+          { header: undefined },
+          { header: JSON.stringify({ attempt: 1, errorCode: 502 }) },
+          { header: JSON.stringify({ attempt: 2, errorCode: 502 }) },
+        ]);
       } else {
         expect(requests1.length).toBe(1);
         expect(requests1[0]).toEqual({ header: undefined });

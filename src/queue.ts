@@ -85,21 +85,24 @@ export class QueueImpl implements Queue {
           return fetchFn(url, body, createHeaders(attemptCount, statusCode))
             .then(() => this.replayEntries())
             .catch(() => {
+              const debugInfo = JSON.stringify(
+                {
+                  url,
+                  timestamp,
+                  statusCode,
+                },
+                null,
+                2
+              );
               if (attemptCount + 1 > retryQueueConfig.attemptLimit) {
                 debug(
-                  'Exceeded attempt count, pushing the entry back to store',
-                  JSON.stringify(
-                    {
-                      url,
-                      timestamp,
-                      statusCode,
-                    },
-                    null,
-                    2
-                  )
+                  'Exceeded attempt count, dropping the entry: ' + debugInfo
                 );
                 return;
               }
+              debug(
+                'Replaying the entry failed, pushing back to IDB: ' + debugInfo
+              );
               return pushIfNotClearing(
                 {
                   url,

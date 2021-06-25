@@ -5,5 +5,6 @@ module.exports = {
       tsconfig: '__tests__/tsconfig.json',
     },
   },
+  testMatch: ["**/__tests__/**/*.spec.ts"],
   testTimeout: 30_000,
 };
