@@ -4,6 +4,7 @@
 
 ## setRetryQueueConfig() function
 
+
 <b>Signature:</b>
 
 ```typescript

@@ -8,24 +8,24 @@ import {
 } from 'idb-queue';
 
 import fetchFn from './fetch-fn';
-import { debug, logError } from './utils';
+import { createHeaders, debug, logError } from './utils';
 
+/**
+ * @internal
+ */
 export interface RetryEntry {
   url: string;
   body: string;
   statusCode?: number;
   timestamp: number;
+  attemptCount: number;
 }
 
-export interface RetryQueueConfig {
+interface RetryQueueConfig {
   attemptLimit: number;
   maxNumber: number;
   batchEvictionNumber: number;
   throttleWait: number;
-}
-
-interface RetryEntryWithAttempt extends RetryEntry {
-  attemptCount: number;
 }
 
 interface Queue {
@@ -35,16 +35,6 @@ interface Queue {
   setThrottleWait(wait: number): void;
   peek(count: number): Promise<RetryEntry[]>;
   peekBack(count: number): Promise<RetryEntry[]>;
-}
-
-let retryHeaderPath: string | undefined;
-
-function createHeaders(attempt: number, errorCode?: number): HeadersInit {
-  if (!retryHeaderPath) return {};
-  const headersInit = {
-    [retryHeaderPath]: JSON.stringify({ attempt, errorCode }),
-  };
-  return headersInit;
 }
 
 let retryQueueConfig: RetryQueueConfig = {
@@ -87,7 +77,7 @@ export class QueueImpl implements Queue {
 
   private replayEntries(): void {
     debug('Replaying entry: shift from store');
-    shift<RetryEntryWithAttempt>(1, this.withStore)
+    shift<RetryEntry>(1, this.withStore)
       .then((entries) => {
         debug(`Replaying entry: read ${entries.length} entry`);
         if (entries.length > 0) {
@@ -131,12 +121,8 @@ export class QueueImpl implements Queue {
 
   // throttle retry timer when pushed
   public push(entry: RetryEntry): void {
-    const entryWithAttempt: RetryEntryWithAttempt = {
-      ...entry,
-      attemptCount: 1,
-    };
     debug('Persisting to DB ' + entry.url);
-    pushIfNotClearing(entryWithAttempt, retryQueueConfig, this.withStore)
+    pushIfNotClearing(entry, retryQueueConfig, this.withStore)
       .then(() => debug('push completed'))
       .catch(logError);
   }
@@ -177,8 +163,8 @@ class NoopQueue {
 
 const beaconListeners = new Set<() => void>();
 /**
-  * @internal
-  */
+ * @internal
+ */
 export function onClear(cb: () => void): void {
   beaconListeners.add(cb);
 }
@@ -196,20 +182,29 @@ export function notifyQueue(): void {
   retryQueue.onNotify();
 }
 
-export function setRetryHeaderPath(path: string): void {
-  retryHeaderPath = path;
-}
+/**
+ * @public
+ */
 export function setRetryQueueConfig(config: RetryQueueConfig): void {
   retryQueueConfig = config;
   retryQueue.setThrottleWait(config.throttleWait);
 }
+/**
+ * @public
+ */
 export function clearQueue(): Promise<void> {
   beaconListeners.forEach((cb) => cb());
   return retryQueue.clear();
 }
+/**
+ * @public
+ */
 export function peekQueue(count: number): Promise<RetryEntry[]> {
   return retryQueue.peek(count);
 }
+/**
+ * @public
+ */
 export function peekBackQueue(count: number): Promise<RetryEntry[]> {
   return retryQueue.peekBack(count);
 }

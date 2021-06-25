@@ -4,6 +4,7 @@
 
 ## setRetryHeaderPath() function
 
+
 <b>Signature:</b>
 
 ```typescript

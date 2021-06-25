@@ -1,7 +1,7 @@
 import fetchFn, { supportFetch } from './fetch-fn';
 import { BeaconConfig, RetryRejection } from './interfaces';
 import { notifyQueue, onClear, pushToQueue, removeOnClear } from './queue';
-import { debug, logError, sleep } from './utils';
+import { createHeaders, debug, logError, sleep } from './utils';
 
 /**
  * 502 Bad Gateway
@@ -18,7 +18,7 @@ class Beacon {
   private timestamp: number;
   private isClearQueuePending = false;
   private onClearCallback: () => void;
-  private calculateRetryDelay: (countLeft: number) => number;
+  private calculateRetryDelay: (retryCountLeft: number) => number;
 
   constructor(
     private url: string,
@@ -26,13 +26,16 @@ class Beacon {
     private config?: BeaconConfig
   ) {
     this.timestamp = Date.now();
-    const retryCountLeft = config?.retry?.limit ?? 0;
     this.onClearCallback = () => (this.isClearQueuePending = true);
     onClear(this.onClearCallback);
     this.calculateRetryDelay =
       config?.retry?.calculateRetryDelay ??
-      ((countLeft) => ((config?.retry?.limit ?? 0) - countLeft + 1) * 2000);
-    this.retry(() => fetchFn(url, body, {}), retryCountLeft)
+      ((retryCountLeft) => this.getAttemptCount(retryCountLeft) * 2000);
+    const initialRetryCountLeft = this.retryLimit;
+    this.retry(
+      (headers: HeadersInit) => fetchFn(url, body, headers),
+      initialRetryCountLeft
+    )
       .catch((reason) =>
         logError('Retry finished with rejection: ' + JSON.stringify(reason))
       )
@@ -42,6 +45,14 @@ class Beacon {
       });
   }
 
+  private get retryLimit(): number {
+    return this.config?.retry?.limit ?? 0;
+  }
+
+  private getAttemptCount(retryCountLeft: number): number {
+    return this.retryLimit - retryCountLeft + 1;
+  }
+
   /**
    * Retry executing a function
    *
@@ -49,11 +60,12 @@ class Beacon {
    * @returns result of the retry operation, true if fn ever resolved during retry, false if all retry failed
    */
   private retry(
-    fn: () => Promise<unknown>,
-    retryCountLeft: number
+    fn: (headers: HeadersInit) => Promise<unknown>,
+    retryCountLeft: number,
+    errorCode?: number
   ): Promise<true> {
-    debug(`retry ${retryCountLeft}`);
-    return fn()
+    const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
+    return fn(createHeaders(attemptCount, errorCode))
       .catch((error: RetryRejection) => {
         debug('retry rejected', JSON.stringify(error));
         if (this.shouldPersist(retryCountLeft, error)) {
@@ -63,11 +75,12 @@ class Beacon {
             body: this.body,
             statusCode: error.statusCode,
             timestamp: this.timestamp,
+            attemptCount: this.getAttemptCount(retryCountLeft),
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(error)) {
           debug('in memory retry');
           return sleep(this.calculateRetryDelay(retryCountLeft)).then(() =>
-            this.retry(fn, retryCountLeft - 1)
+            this.retry(fn, retryCountLeft - 1, error.statusCode)
           );
         }
         throw error;
@@ -78,11 +91,6 @@ class Beacon {
         }
         return true;
       });
-  }
-
-  private defaultCalculateRetryDelay(countLeft: number): number {
-    const count = (this.config?.retry?.limit ?? 0) - countLeft + 1;
-    return count * 2000;
   }
 
   private isRetryableError(error: RetryRejection): boolean {
