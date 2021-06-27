@@ -1,3 +1,5 @@
 export function log(message: string, ...rest: unknown[]): void {
-  console.log(message, ...rest);
+  if (process.env.DEBUG) {
+    console.log(message, ...rest);
+  }
 }

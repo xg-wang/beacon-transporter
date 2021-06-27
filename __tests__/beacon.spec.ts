@@ -3,22 +3,39 @@ import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
+import waitForExpect from 'wait-for-expect';
 
 import type beaconType from '../src/';
 import { setRetryHeaderPath } from '../src/';
 import { log } from './utils';
+
+expect.extend({
+  toBeAround(actual, expected, delta = 200) {
+    const pass = Math.abs(expected - actual) < delta / 2;
+    if (pass) {
+      return {
+        message: () => `expected ${actual} not to be close to ${expected}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${actual} to be close to ${expected}`,
+        pass: false,
+      };
+    }
+  },
+});
 
 declare global {
   interface Window {
     beacon: typeof beaconType;
     setRetryHeaderPath: typeof setRetryHeaderPath;
   }
-}
-
-function defer(): [Promise<unknown>, (value: unknown) => void] {
-  let resolver: (value: unknown) => void;
-  const runningPromise = new Promise((res) => (resolver = res));
-  return [runningPromise, resolver];
+  namespace jest {
+    interface Matchers<R> {
+      toBeAround(expected: number, delta?: number): R;
+    }
+  }
 }
 
 const script = {
@@ -88,39 +105,32 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
     it('should fetch', async () => {
       const results = [];
-      const [serverPromise, serverResolver] = defer();
       server.post('/api', (request, response) => {
         results.push(request.body);
-        serverResolver(null);
         response.end('hello');
       });
-      const [, result] = await Promise.all([
-        serverPromise,
-        page.evaluate((url) => {
-          return window.beacon(`${url}/api`, 'hello');
-        }, server.url),
-      ]);
-
+      const result = await page.evaluate((url) => {
+        return window.beacon(`${url}/api`, 'hello');
+      }, server.url);
       expect(result).toBeUndefined;
-      expect(results).toEqual(['hello']);
+      await waitForExpect(() => {
+        expect(results).toEqual(['hello']);
+      });
     });
 
     it('should send payload larger than 64kb', async () => {
       const results = [];
-      const [serverPromise, serverResolver] = defer();
       server.post('/api', (request, response) => {
         results.push(request.body);
-        serverResolver(null);
         response.end('hello');
       });
-      await Promise.all([
-        serverPromise,
-        page.evaluate((url) => {
-          return window.beacon(`${url}/api`, 's'.repeat(64_100));
-        }, server.url),
-      ]);
+      await page.evaluate((url) => {
+        return window.beacon(`${url}/api`, 's'.repeat(64_100));
+      }, server.url);
 
-      expect(results[0].length).toEqual(64_100);
+      await waitForExpect(() => {
+        expect(results[0].length).toEqual(64_100);
+      });
     });
 
     if (
@@ -134,10 +144,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
       it('should send payload on closing tab', async () => {
         const results = [];
-        const [serverPromise, serverResolver] = defer();
         server.post('/api', (request, response) => {
           results.push(request.body);
-          serverResolver(null);
           response.end('hello');
         });
         await page.evaluate(
@@ -149,9 +157,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           [server.url, getCloseTabEvent(name)]
         );
         pageClosedForConsoleLog = true;
-        await Promise.all([serverPromise, closePage(page)]);
+        await closePage(page);
 
-        expect(results).toEqual(['closing']);
+        await waitForExpect(() => {
+          expect(results).toEqual(['closing']);
+        });
       });
     }
 
@@ -196,8 +206,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url]
       );
-      await page.waitForTimeout(7000);
-      expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (2 + 1) * 2);
+      await waitForExpect(() => {
+        expect(numberOfRetries).toBe(name === 'firefox' ? 1 : (2 + 1) * 2);
+      }, 10000);
     });
 
     it('retry on server response statusCode', async () => {
@@ -227,16 +238,20 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url]
       );
-      await page.waitForTimeout(7000);
+      await waitForExpect(() => {
+        if (name !== 'firefox') {
+          expect(requests1.length).toBe(2 + 1);
+        } else {
+          expect(requests1.length).toBe(1);
+        }
+      }, 10000);
       if (name !== 'firefox') {
-        expect(requests1.length).toBe(2 + 1);
         expect(requests1).toEqual([
           { header: undefined },
           { header: JSON.stringify({ attempt: 1, errorCode: 502 }) },
           { header: JSON.stringify({ attempt: 2, errorCode: 502 }) },
         ]);
       } else {
-        expect(requests1.length).toBe(1);
         expect(requests1[0]).toEqual({ header: undefined });
       }
       expect(requests2.length).toBe(1);
@@ -245,7 +260,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     it('can customize retry delay', async () => {
       const requests = [];
       server.post('/api/retry', (request, response) => {
-        requests.push(request.body);
+        requests.push(Date.now());
         response.sendStatus(502);
       });
       await page.evaluate(
@@ -260,12 +275,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url]
       );
-      await page.waitForTimeout(100);
-      expect(requests.length).toEqual(name === 'firefox' ? 1 : 2);
-      await page.waitForTimeout(1800);
-      expect(requests.length).toEqual(name === 'firefox' ? 1 : 2);
-      await page.waitForTimeout(200);
-      expect(requests.length).toEqual(name === 'firefox' ? 1 : 3);
+      await waitForExpect(() => {
+        expect(requests.length).toEqual(name === 'firefox' ? 1 : 3);
+      });
+      if (name !== 'firefox') {
+        expect(requests[1] - requests[0]).toBeAround(1);
+        expect(requests[2] - requests[1]).toBeAround(2000);
+      }
     });
   }
 );
