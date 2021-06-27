@@ -10,8 +10,8 @@ import { setRetryHeaderPath } from '../src/';
 import { log } from './utils';
 
 expect.extend({
-  toBeAround(actual, expected, delta = 200) {
-    const pass = Math.abs(expected - actual) < delta / 2;
+  toBeAround(actual, expected, range = 400) {
+    const pass = Math.abs(expected - actual) < range / 2;
     if (pass) {
       return {
         message: () => `expected ${actual} not to be close to ${expected}`,
