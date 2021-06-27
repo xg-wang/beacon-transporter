@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
+import waitForExpect from 'wait-for-expect';
 
 import type beaconType from '../src/';
 import type {
@@ -11,7 +12,6 @@ import type {
   setRetryQueueConfig,
 } from '../src/';
 import type { peekQueue, RetryEntry } from '../src/queue';
-import { sleep } from '../src/utils';
 import { log } from './utils';
 
 declare global {
@@ -22,12 +22,6 @@ declare global {
     setRetryQueueConfig: typeof setRetryQueueConfig;
     peekQueue: typeof peekQueue;
   }
-}
-
-function defer(): [Promise<unknown>, (value: unknown) => void] {
-  let resolver: (value: unknown) => void;
-  const runningPromise = new Promise((res) => (resolver = res));
-  return [runningPromise, resolver];
 }
 
 const script = {
@@ -108,17 +102,11 @@ describe.each([
   });
 
   it('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 2) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -147,25 +135,20 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await serverPromise;
+    await waitForExpect(() => {
+      expect(results.length).toBe(2);
+    }, 7500);
     expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : 2 * 3 + 2);
-    expect(results.length).toBe(2);
     // attempt count includes in-memory attempts
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 3 }));
   });
 
   it('retry with reading IDB skipped if retry.persist=false', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 2) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -189,8 +172,9 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await Promise.race([serverPromise, sleep(3000)]);
-    expect(results.length).toBe(2);
+    await waitForExpect(() => {
+      expect(results.length).toBe(2);
+    });
     await page.waitForTimeout(1000);
     // There is no retry from idb
     expect(results.length).toBe(2);
@@ -200,17 +184,11 @@ describe.each([
   });
 
   it('retry with reading IDB is throttled with every successful response', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 6) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -247,8 +225,9 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await Promise.race([serverPromise, sleep(10000)]);
-    expect(results.length).toBe(6);
+    await waitForExpect(() => {
+      expect(results.length).toBe(6);
+    });
     expect(results[0].status).toBe(429);
     expect(results[0].header).toBeUndefined;
     expect(results[1].status).toBe(200);
@@ -261,17 +240,11 @@ describe.each([
   });
 
   it('in memory retry statusCode response will not retry', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 3) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -299,7 +272,9 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await Promise.race([serverPromise, sleep(10000)]);
+    await waitForExpect(() => {
+      expect(results.length).toBe(3);
+    });
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
     expect(results[0].status).toBe(502);
@@ -310,17 +285,11 @@ describe.each([
   });
 
   it('Storage can be manually cleared', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 2) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -349,7 +318,9 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await Promise.race([serverPromise, sleep(10000)]);
+    await waitForExpect(() => {
+      expect(results.length).toBe(2);
+    });
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(2);
     expect(results[0].status).toBe(429);
@@ -358,17 +329,11 @@ describe.each([
   });
 
   it('persisting retryable statusCode has attempt limitation', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 6) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -406,31 +371,22 @@ describe.each([
       },
       [server.url, createBody(contentLength)]
     );
-    await Promise.race([serverPromise, sleep(10000)]);
+    await waitForExpect(() => {
+      expect(results.length).toBe(6);
+    });
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(6);
     expect(results.map((r) => r.status)).toEqual([
-      429,
-      200,
-      429,
-      200,
-      429,
-      200,
+      429, 200, 429, 200, 429, 200,
     ]);
   });
 
   it('persistent data can be retried on another page', async () => {
-    const [serverPromise, resolver] = defer();
     const results = [];
-    let serverCount = 0;
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
       const payload = { status, header: headers['x-retry-context'] };
       results.push(payload);
-      log(`Received ${++serverCount} request`, payload);
-      if (serverCount === 3) {
-        resolver(null);
-      }
       res.status(status).send(`Status: ${status}`);
     });
 
@@ -487,7 +443,9 @@ describe.each([
       [server.url, createBody(contentLength)]
     );
 
-    await serverPromise;
+    await waitForExpect(() => {
+      expect(results.length).toBe(3);
+    });
     await page2.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
     expect(results.map((r) => r.status)).toEqual([429, 200, 429]);

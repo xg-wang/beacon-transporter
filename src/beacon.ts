@@ -1,7 +1,7 @@
 import fetchFn, { supportFetch } from './fetch-fn';
 import { BeaconConfig, RetryRejection } from './interfaces';
 import { notifyQueue, onClear, pushToQueue, removeOnClear } from './queue';
-import { createHeaders, debug, logError, sleep } from './utils';
+import { createHeaders, debug, sleep } from './utils';
 
 /**
  * 502 Bad Gateway
