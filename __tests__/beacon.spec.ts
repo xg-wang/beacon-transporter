@@ -244,6 +244,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         } else {
           expect(requests1.length).toBe(1);
         }
+        expect(requests2.length).toBe(1);
       }, 10000);
       if (name !== 'firefox') {
         expect(requests1).toEqual([
@@ -254,7 +255,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       } else {
         expect(requests1[0]).toEqual({ header: undefined });
       }
-      expect(requests2.length).toBe(1);
     });
 
     it('can customize retry delay', async () => {
