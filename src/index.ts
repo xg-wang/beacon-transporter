@@ -6,4 +6,3 @@
 export { createBeacon } from './beacon';
 export * from './interfaces';
 export { RetryDB } from './queue';
-export { setRetryHeaderPath } from './utils';

@@ -7,13 +7,11 @@ import waitForExpect from 'wait-for-expect';
 
 import type { createBeacon } from '../src/';
 import type { RetryEntry } from '../src/queue';
-import type { setRetryHeaderPath } from '../src/utils';
 import { log } from './utils';
 
 declare global {
   interface Window {
     createBeacon: typeof createBeacon;
-    setRetryHeaderPath: typeof setRetryHeaderPath;
   }
 }
 
@@ -22,7 +20,6 @@ const script = {
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
 self.createBeacon = createBeacon;
-self.setRetryHeaderPath = setRetryHeaderPath;
 self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
 };
@@ -91,7 +88,7 @@ describe.each([
     await server.close();
   });
 
-  it('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
+  it.only('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
     const results = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
@@ -113,10 +110,9 @@ describe.each([
     });
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 2, persist: true },
+            retry: { limit: 2, persist: true, headerName: 'x-retry-context' },
           },
         });
         beacon(`${url}/api/200`, bodyPayload);
@@ -145,10 +141,9 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: false },
+            retry: { limit: 0, persist: false, headerName: 'x-retry-context' },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -187,10 +182,9 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: true },
+            retry: { limit: 0, persist: true, headerName: 'x-retry-context' },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -241,10 +235,14 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 1, persist: true, inMemoryRetryStatusCodes: [502] },
+            retry: {
+              limit: 1,
+              persist: true,
+              inMemoryRetryStatusCodes: [502],
+              headerName: 'x-retry-context',
+            },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -284,10 +282,14 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon, database } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 1, persist: true, inMemoryRetryStatusCodes: [429] },
+            retry: {
+              limit: 1,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -326,10 +328,14 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -373,10 +379,14 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
           },
           retryDBConfig: {
             storeName: 'default',
@@ -407,10 +417,14 @@ describe.each([
     );
     await page2.evaluate(
       ([url, bodyPayload]) => {
-        window.setRetryHeaderPath('x-retry-context');
         const { beacon } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
           },
           retryDBConfig: {
             storeName: 'default',

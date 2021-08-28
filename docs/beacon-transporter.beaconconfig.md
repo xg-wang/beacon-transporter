@@ -15,5 +15,5 @@ export interface BeaconConfig
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [retry?](./beacon-transporter.beaconconfig.retry.md) | { limit: number; inMemoryRetryStatusCodes?: number\[\]; persist?: boolean; persistRetryStatusCodes?: number\[\]; calculateRetryDelay?: (countLeft: number) =&gt; number; } | <i>(Optional)</i> |
+|  [retry](./beacon-transporter.beaconconfig.retry.md) | { limit: number; headerName?: string; inMemoryRetryStatusCodes?: number\[\]; persist?: boolean; persistRetryStatusCodes?: number\[\]; calculateRetryDelay?: (countLeft: number) =&gt; number; } |  |
 

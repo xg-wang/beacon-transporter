@@ -7,8 +7,9 @@
 <b>Signature:</b>
 
 ```typescript
-retry?: {
+retry: {
         limit: number;
+        headerName?: string;
         inMemoryRetryStatusCodes?: number[];
         persist?: boolean;
         persistRetryStatusCodes?: number[];

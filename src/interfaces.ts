@@ -11,6 +11,7 @@ export interface BeaconInit {
  */
 export interface RetryDBConfig {
   storeName: string;
+  headerName?: string;
   attemptLimit: number;
   maxNumber: number;
   batchEvictionNumber: number;
@@ -21,8 +22,12 @@ export interface RetryDBConfig {
  * @public
  */
 export interface BeaconConfig {
-  retry?: {
+  retry: {
     limit: number;
+    /**
+     * HTTP header name for the header that contains retry context
+     */
+    headerName?: string;
     inMemoryRetryStatusCodes?: number[];
     persist?: boolean;
     persistRetryStatusCodes?: number[];
@@ -56,6 +61,6 @@ export interface ResponseRetryRejection {
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 /**
-  * @public
-  */
+ * @public
+ */
 export type BeaconFunc = (url: string, body: string) => void;

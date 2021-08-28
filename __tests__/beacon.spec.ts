@@ -6,7 +6,6 @@ import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
 import type { createBeacon } from '../src/';
-import type { setRetryHeaderPath } from '../src/';
 import { log } from './utils';
 
 expect.extend({
@@ -29,7 +28,6 @@ expect.extend({
 declare global {
   interface Window {
     createBeacon: typeof createBeacon;
-    setRetryHeaderPath: typeof setRetryHeaderPath;
   }
   namespace jest {
     interface Matchers<R> {
@@ -43,7 +41,6 @@ const script = {
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
 self.createBeacon = createBeacon;
-self.setRetryHeaderPath = setRetryHeaderPath;
 self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
 };
@@ -232,11 +229,10 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       });
       await page.evaluate(
         ([url]) => {
-          window.setRetryHeaderPath('x-retry-context');
           window
             .createBeacon({
               beaconConfig: {
-                retry: { limit: 2, inMemoryRetryStatusCodes: [502] },
+                retry: { limit: 2, inMemoryRetryStatusCodes: [502], headerName: 'x-retry-context' },
               },
             })
             .beacon(`${url}/api/retry`, 'hi');
