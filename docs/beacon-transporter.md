@@ -6,33 +6,33 @@
 
 Reliable beacon API for the browser
 
+## Classes
+
+|  Class | Description |
+|  --- | --- |
+|  [RetryDB](./beacon-transporter.retrydb.md) |  |
+
 ## Functions
 
 |  Function | Description |
 |  --- | --- |
-|  [clearQueue()](./beacon-transporter.clearqueue.md) |  |
-|  [peekBackQueue(count)](./beacon-transporter.peekbackqueue.md) |  |
-|  [peekQueue(count)](./beacon-transporter.peekqueue.md) |  |
+|  [createBeacon(init)](./beacon-transporter.createbeacon.md) |  |
 |  [setRetryHeaderPath(path)](./beacon-transporter.setretryheaderpath.md) |  |
-|  [setRetryQueueConfig(config)](./beacon-transporter.setretryqueueconfig.md) |  |
 
 ## Interfaces
 
 |  Interface | Description |
 |  --- | --- |
 |  [BeaconConfig](./beacon-transporter.beaconconfig.md) |  |
+|  [BeaconInit](./beacon-transporter.beaconinit.md) |  |
 |  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
 |  [ResponseRetryRejection](./beacon-transporter.responseretryrejection.md) |  |
-
-## Variables
-
-|  Variable | Description |
-|  --- | --- |
-|  [beacon](./beacon-transporter.beacon.md) |  |
+|  [RetryDBConfig](./beacon-transporter.retrydbconfig.md) |  |
 
 ## Type Aliases
 
 |  Type Alias | Description |
 |  --- | --- |
+|  [BeaconFunc](./beacon-transporter.beaconfunc.md) |  |
 |  [RetryRejection](./beacon-transporter.retryrejection.md) |  |
 

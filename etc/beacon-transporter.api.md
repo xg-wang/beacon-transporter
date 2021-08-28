@@ -5,11 +5,6 @@
 ```ts
 
 // @public (undocumented)
-const beacon: (url: string, body: string, config?: BeaconConfig | undefined) => void;
-
-export default beacon;
-
-// @public (undocumented)
 export interface BeaconConfig {
     // (undocumented)
     retry?: {
@@ -22,7 +17,21 @@ export interface BeaconConfig {
 }
 
 // @public (undocumented)
-export function clearQueue(): Promise<void>;
+export type BeaconFunc = (url: string, body: string) => void;
+
+// @public (undocumented)
+export interface BeaconInit {
+    // (undocumented)
+    beaconConfig?: BeaconConfig;
+    // (undocumented)
+    retryDBConfig?: RetryDBConfig;
+}
+
+// @public (undocumented)
+export function createBeacon(init?: BeaconInit): {
+    beacon: BeaconFunc;
+    database: RetryDB;
+};
 
 // @public (undocumented)
 export interface NetworkRetryRejection {
@@ -35,14 +44,6 @@ export interface NetworkRetryRejection {
     // (undocumented)
     url: string;
 }
-
-// Warning: (ae-forgotten-export) The symbol "RetryEntry" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function peekBackQueue(count: number): Promise<RetryEntry[]>;
-
-// @public (undocumented)
-export function peekQueue(count: number): Promise<RetryEntry[]>;
 
 // @public (undocumented)
 export interface ResponseRetryRejection {
@@ -57,15 +58,46 @@ export interface ResponseRetryRejection {
 }
 
 // @public (undocumented)
+export class RetryDB {
+    constructor(config?: RetryDBConfig);
+    // (undocumented)
+    clearQueue(): Promise<void>;
+    // (undocumented)
+    static hasSupport: boolean;
+    // (undocumented)
+    notifyQueue(): void;
+    // (undocumented)
+    onClear(cb: () => void): void;
+    // (undocumented)
+    peekBackQueue(count: number): Promise<RetryEntry[]>;
+    // (undocumented)
+    peekQueue(count: number): Promise<RetryEntry[]>;
+    // Warning: (ae-forgotten-export) The symbol "RetryEntry" needs to be exported by the entry point index.d.ts
+    //
+    // (undocumented)
+    pushToQueue(entry: RetryEntry): void;
+    // (undocumented)
+    removeOnClear(cb: () => void): void;
+}
+
+// @public (undocumented)
+export interface RetryDBConfig {
+    // (undocumented)
+    attemptLimit: number;
+    // (undocumented)
+    batchEvictionNumber: number;
+    // (undocumented)
+    maxNumber: number;
+    // (undocumented)
+    storeName: string;
+    // (undocumented)
+    throttleWait: number;
+}
+
+// @public (undocumented)
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 // @public (undocumented)
 export function setRetryHeaderPath(path: string): void;
-
-// Warning: (ae-forgotten-export) The symbol "RetryQueueConfig" needs to be exported by the entry point index.d.ts
-//
-// @public (undocumented)
-export function setRetryQueueConfig(config: RetryQueueConfig): void;
-
 
 ```

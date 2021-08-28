@@ -1,9 +1,9 @@
-import beacon from '../src';
+import { createBeacon } from '../src';
 
 describe('Use in node', () => {
   it('Can run noop when called in node', () => {
     expect(() => {
-      beacon('/api', 'hello');
+      createBeacon().beacon('/api', 'hello');
     }).not.toThrow();
   });
 });
