@@ -4,19 +4,10 @@ declare global {
   }
 }
 
-let retryHeaderPath: string | undefined;
-
-/**
-  * @public
-  */
-export function setRetryHeaderPath(path: string): void {
-  retryHeaderPath = path;
-}
-
-export function createHeaders(attempt: number, errorCode?: number): HeadersInit {
-  if (!retryHeaderPath || attempt < 1) return {};
+export function createHeaders(headerName: string | undefined, attempt: number, errorCode?: number): HeadersInit {
+  if (!headerName || attempt < 1) return {};
   const headersInit = {
-    [retryHeaderPath]: JSON.stringify({ attempt, errorCode }),
+    [headerName]: JSON.stringify({ attempt, errorCode }),
   };
   return headersInit;
 }

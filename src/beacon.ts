@@ -1,5 +1,10 @@
 import fetchFn, { supportFetch } from './fetch-fn';
-import type { BeaconConfig, BeaconFunc, BeaconInit, RetryRejection } from './interfaces';
+import type {
+  BeaconConfig,
+  BeaconFunc,
+  BeaconInit,
+  RetryRejection,
+} from './interfaces';
 import { RetryDB } from './queue';
 import { createHeaders, debug, sleep } from './utils';
 
@@ -23,14 +28,14 @@ class Beacon {
   constructor(
     private url: string,
     private body: string,
-    private config: BeaconConfig = {},
+    private config: BeaconConfig,
     private db: RetryDB
   ) {
     this.timestamp = Date.now();
     this.onClearCallback = () => (this.isClearQueuePending = true);
     this.db.onClear(this.onClearCallback);
     this.calculateRetryDelay =
-      config.retry?.calculateRetryDelay ??
+      config.retry.calculateRetryDelay ??
       ((retryCountLeft) => this.getAttemptCount(retryCountLeft) * 2000);
     const initialRetryCountLeft = this.retryLimit;
     this.retry(
@@ -43,7 +48,7 @@ class Beacon {
   }
 
   private get retryLimit(): number {
-    return this.config.retry?.limit ?? 0;
+    return this.config.retry.limit;
   }
 
   private getAttemptCount(retryCountLeft: number): number {
@@ -62,7 +67,9 @@ class Beacon {
     errorCode?: number
   ): Promise<true> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
-    return fn(createHeaders(attemptCount, errorCode))
+    return fn(
+      createHeaders(this.config.retry.headerName, attemptCount, errorCode)
+    )
       .catch((error: RetryRejection) => {
         debug('retry rejected ' + JSON.stringify(error));
         if (this.shouldPersist(retryCountLeft, error)) {
@@ -83,7 +90,7 @@ class Beacon {
         throw error;
       })
       .then(() => {
-        if (!this.isClearQueuePending && this.config.retry?.persist) {
+        if (!this.isClearQueuePending && this.config.retry.persist) {
           this.db.notifyQueue();
         }
         return true;
@@ -94,7 +101,7 @@ class Beacon {
     if (
       error.type === 'network' ||
       (
-        this.config.retry?.inMemoryRetryStatusCodes ??
+        this.config.retry.inMemoryRetryStatusCodes ??
         defaultInMemoryRetryStatusCodes
       ).includes(error.statusCode)
     ) {
@@ -107,7 +114,7 @@ class Beacon {
     retryCountLeft: number,
     error: RetryRejection
   ): boolean {
-    if (this.isClearQueuePending || !this.config.retry?.persist) {
+    if (this.isClearQueuePending || !this.config.retry.persist) {
       return false;
     }
     // Short-circuit if apparently offline or all back-off retries fail
@@ -120,7 +127,7 @@ class Beacon {
     const fromStatusCode =
       error.type === 'response' &&
       (
-        this.config.retry?.persistRetryStatusCodes ??
+        this.config.retry.persistRetryStatusCodes ??
         defaultPersistRetryStatusCodes
       ).includes(error.statusCode);
     if (fromStatusCode) {
@@ -137,7 +144,7 @@ export function createBeacon(init: BeaconInit = {}): {
   beacon: BeaconFunc;
   database: RetryDB;
 } {
-  const { beaconConfig, retryDBConfig } = init;
+  const { beaconConfig, retryDBConfig } = prepareConfig(init);
   const database = new RetryDB(retryDBConfig);
   const beacon: BeaconFunc = (url, body) => {
     if (!supportFetch) {
@@ -146,4 +153,24 @@ export function createBeacon(init: BeaconInit = {}): {
     new Beacon(url, body, beaconConfig, database);
   };
   return { beacon, database };
+}
+
+function prepareConfig(init: BeaconInit): Required<BeaconInit> {
+  const beaconConfig = init.beaconConfig || {
+    retry: {
+      limit: 0,
+    },
+  };
+  const retryDBConfig = init.retryDBConfig || {
+    storeName: 'default',
+    attemptLimit: 3,
+    maxNumber: 1000,
+    batchEvictionNumber: 300,
+    throttleWait: 5 * 60 * 1000,
+  };
+  const retryHeader = beaconConfig.retry.headerName;
+  if (retryHeader) {
+    retryDBConfig.headerName = retryHeader;
+  }
+  return { beaconConfig, retryDBConfig };
 }

@@ -7,8 +7,9 @@
 // @public (undocumented)
 export interface BeaconConfig {
     // (undocumented)
-    retry?: {
+    retry: {
         limit: number;
+        headerName?: string;
         inMemoryRetryStatusCodes?: number[];
         persist?: boolean;
         persistRetryStatusCodes?: number[];
@@ -59,7 +60,7 @@ export interface ResponseRetryRejection {
 
 // @public (undocumented)
 export class RetryDB {
-    constructor(config?: RetryDBConfig);
+    constructor(config: RetryDBConfig);
     // (undocumented)
     clearQueue(): Promise<void>;
     // (undocumented)
@@ -87,6 +88,8 @@ export interface RetryDBConfig {
     // (undocumented)
     batchEvictionNumber: number;
     // (undocumented)
+    headerName?: string;
+    // (undocumented)
     maxNumber: number;
     // (undocumented)
     storeName: string;
@@ -96,8 +99,5 @@ export interface RetryDBConfig {
 
 // @public (undocumented)
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
-
-// @public (undocumented)
-export function setRetryHeaderPath(path: string): void;
 
 ```

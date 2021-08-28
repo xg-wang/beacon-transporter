@@ -17,7 +17,6 @@ Reliable beacon API for the browser
 |  Function | Description |
 |  --- | --- |
 |  [createBeacon(init)](./beacon-transporter.createbeacon.md) |  |
-|  [setRetryHeaderPath(path)](./beacon-transporter.setretryheaderpath.md) |  |
 
 ## Interfaces
 

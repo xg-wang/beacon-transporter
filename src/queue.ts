@@ -74,7 +74,16 @@ class QueueImpl implements Queue {
       .then((entries) => {
         if (entries.length > 0) {
           const { url, body, timestamp, statusCode, attemptCount } = entries[0];
-          return fetchFn(url, body, createHeaders(attemptCount, statusCode))
+          debug(
+            `header: ${String(
+              this.config.headerName
+            )}; attemptCount: ${attemptCount}`
+          );
+          return fetchFn(
+            url,
+            body,
+            createHeaders(this.config.headerName, attemptCount, statusCode)
+          )
             .then(() => this.replayEntries())
             .catch(() => {
               const debugInfo = JSON.stringify(
@@ -168,15 +177,7 @@ export class RetryDB {
   private queue: Queue;
   private beaconListeners = new Set<() => void>();
 
-  constructor(
-    config: RetryDBConfig = {
-      storeName: 'default',
-      attemptLimit: 3,
-      maxNumber: 1000,
-      batchEvictionNumber: 300,
-      throttleWait: 5 * 60 * 1000,
-    }
-  ) {
+  constructor(config: RetryDBConfig) {
     this.queue = RetryDB.hasSupport ? new QueueImpl(config) : new NoopQueue();
   }
 

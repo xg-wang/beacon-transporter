@@ -17,6 +17,7 @@ export interface RetryDBConfig
 |  --- | --- | --- |
 |  [attemptLimit](./beacon-transporter.retrydbconfig.attemptlimit.md) | number |  |
 |  [batchEvictionNumber](./beacon-transporter.retrydbconfig.batchevictionnumber.md) | number |  |
+|  [headerName?](./beacon-transporter.retrydbconfig.headername.md) | string | <i>(Optional)</i> |
 |  [maxNumber](./beacon-transporter.retrydbconfig.maxnumber.md) | number |  |
 |  [storeName](./beacon-transporter.retrydbconfig.storename.md) | string |  |
 |  [throttleWait](./beacon-transporter.retrydbconfig.throttlewait.md) | number |  |

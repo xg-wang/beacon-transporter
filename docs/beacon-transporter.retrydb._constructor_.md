@@ -9,7 +9,7 @@ Constructs a new instance of the `RetryDB` class
 <b>Signature:</b>
 
 ```typescript
-constructor(config?: RetryDBConfig);
+constructor(config: RetryDBConfig);
 ```
 
 ## Parameters
