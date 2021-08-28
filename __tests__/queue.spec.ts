@@ -5,22 +5,15 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type beaconType from '../src/';
-import type {
-  clearQueue,
-  setRetryHeaderPath,
-  setRetryQueueConfig,
-} from '../src/';
-import type { peekQueue, RetryEntry } from '../src/queue';
+import type { createBeacon } from '../src/';
+import type { RetryEntry } from '../src/queue';
+import type { setRetryHeaderPath } from '../src/utils';
 import { log } from './utils';
 
 declare global {
   interface Window {
-    beacon: typeof beaconType;
-    clearQueue: typeof clearQueue;
+    createBeacon: typeof createBeacon;
     setRetryHeaderPath: typeof setRetryHeaderPath;
-    setRetryQueueConfig: typeof setRetryQueueConfig;
-    peekQueue: typeof peekQueue;
   }
 }
 
@@ -28,12 +21,9 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
-window.beacon = beacon;
-window.__DEBUG_BEACON_TRANSPORTER = true;
-window.clearQueue = clearQueue;
-window.peekQueue = peekQueue;
-window.setRetryHeaderPath = setRetryHeaderPath;
-window.setRetryQueueConfig = setRetryQueueConfig;
+self.createBeacon = createBeacon;
+self.setRetryHeaderPath = setRetryHeaderPath;
+self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
 };
 
@@ -124,13 +114,14 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.beacon(`${url}/api/200`, bodyPayload, {
-          retry: { limit: 2, persist: true },
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 2, persist: true },
+          },
         });
+        beacon(`${url}/api/200`, bodyPayload);
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 2000 + 4000 + 500);
       },
       [server.url, createBody(contentLength)]
@@ -155,19 +146,21 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 2,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 2000,
-        });
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: { limit: 0, persist: true },
-        });
-        setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
             retry: { limit: 0, persist: false },
-          });
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 2000,
+          },
+        });
+        beacon(`${url}/api/429`, bodyPayload);
+        setTimeout(() => {
+          beacon(`${url}/api/200`, bodyPayload);
         }, 1000);
       },
       [server.url, createBody(contentLength)]
@@ -195,32 +188,30 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 2,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 2000,
-        });
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: { limit: 0, persist: true },
-        });
-        setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
             retry: { limit: 0, persist: true },
-          });
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 2000,
+          },
+        });
+        beacon(`${url}/api/429`, bodyPayload);
+        setTimeout(() => {
+          beacon(`${url}/api/200`, bodyPayload);
         }, 1000);
         // waiting, will not trigger retry
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 2000);
         // throttling finished, will trigger retry
         // 1000 + 2000 (throttle wait) + grace period
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 3100);
       },
       [server.url, createBody(contentLength)]
@@ -251,23 +242,21 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 1,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 200,
-        });
-        window.beacon(`${url}/api/502`, bodyPayload, {
-          retry: {
-            limit: 1,
-            persist: true,
-            inMemoryRetryStatusCodes: [502],
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 1, persist: true, inMemoryRetryStatusCodes: [502] },
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 1,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
           },
         });
+        beacon(`${url}/api/502`, bodyPayload);
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 2500);
       },
       [server.url, createBody(contentLength)]
@@ -296,24 +285,22 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 1,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 200,
-        });
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: {
-            limit: 1,
-            persist: true,
-            persistRetryStatusCodes: [429],
+        const { beacon, database } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 1, persist: true, inMemoryRetryStatusCodes: [429] },
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 1,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
           },
         });
+        beacon(`${url}/api/429`, bodyPayload);
         setTimeout(async () => {
-          await window.clearQueue();
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          await database.clearQueue();
+          beacon(`${url}/api/200`, bodyPayload);
         }, 2500);
       },
       [server.url, createBody(contentLength)]
@@ -340,33 +327,27 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 2,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 200,
-        });
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: {
-            limit: 0,
-            persist: true,
-            persistRetryStatusCodes: [429], // default is [429, 503]
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
           },
         });
+        beacon(`${url}/api/429`, bodyPayload);
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 1000);
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 2000);
         setTimeout(() => {
-          window.beacon(`${url}/api/200`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          });
+          beacon(`${url}/api/200`, bodyPayload);
         }, 3000);
       },
       [server.url, createBody(contentLength)]
@@ -393,19 +374,19 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 2,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 200,
-        });
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: {
-            limit: 0,
-            persist: true,
-            persistRetryStatusCodes: [429], // default is [429, 503]
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
           },
         });
+        beacon(`${url}/api/429`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
@@ -427,18 +408,19 @@ describe.each([
     await page2.evaluate(
       ([url, bodyPayload]) => {
         window.setRetryHeaderPath('x-retry-context');
-        window.setRetryQueueConfig({
-          attemptLimit: 2,
-          maxNumber: 10,
-          batchEvictionNumber: 3,
-          throttleWait: 200,
-        });
-        window.beacon(`${url}/api/200`, bodyPayload, {
-          retry: {
-            limit: 0,
-            persist: true,
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 0, persist: true, inMemoryRetryStatusCodes: [429] },
+          },
+          retryDBConfig: {
+            storeName: 'default',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
           },
         });
+        beacon(`${url}/api/200`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
@@ -460,26 +442,32 @@ describe.each([
 
     await page.evaluate(
       ([url, bodyPayload]) => {
-        window.beacon(`${url}/api/429`, bodyPayload, {
-          retry: { limit: 0, persist: true },
+        const { beacon, database } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 0, persist: true },
+          },
         });
+        // @ts-ignore
+        window.beacon = beacon;
+        // @ts-ignore
+        window.database = database;
+        beacon(`${url}/api/429`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
     await page.waitForTimeout(1000);
-    const storage = await page.evaluate<RetryEntry[]>(`window.peekQueue(1)`);
+    const storage = await page.evaluate<RetryEntry[]>(`database.peekQueue(1)`);
     expect(storage.length).toBe(1);
 
     await page.evaluate(
       ([url, bodyPayload]) => {
         return Promise.all([
-          window.beacon(`${url}/api/429`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          }),
-          window.beacon(`${url}/api/429`, bodyPayload, {
-            retry: { limit: 0, persist: true },
-          }),
-          window.clearQueue(),
+          // @ts-ignore
+          beacon(`${url}/api/429`, bodyPayload),
+          // @ts-ignore
+          beacon(`${url}/api/429`, bodyPayload),
+          // @ts-ignore
+          database.clearQueue(),
         ]);
       },
       [server.url, createBody(contentLength)]
@@ -487,7 +475,7 @@ describe.each([
     await page.waitForTimeout(1000);
 
     const storageAfterClear = await page.evaluate<RetryEntry[]>(
-      `window.peekQueue(1)`
+      `database.peekQueue(1)`
     );
     expect(storageAfterClear.length).toBe(0);
   });

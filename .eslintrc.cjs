@@ -57,6 +57,7 @@ module.exports = {
         'no-undef': 'off',
         'import/no-duplicates': 'off',
         '@typescript-eslint/no-var-requires': 'off',
+        '@typescript-eslint/ban-ts-comment': 'off',
       },
     },
   ],

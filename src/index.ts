@@ -3,12 +3,7 @@
  * @packageDocumentation
  */
 
-export { default } from './beacon';
+export { createBeacon } from './beacon';
 export * from './interfaces';
-export {
-  clearQueue,
-  peekBackQueue,
-  peekQueue,
-  setRetryQueueConfig,
-} from './queue';
+export { RetryDB } from './queue';
 export { setRetryHeaderPath } from './utils';

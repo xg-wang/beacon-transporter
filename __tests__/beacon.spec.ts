@@ -5,8 +5,8 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type beaconType from '../src/';
-import { setRetryHeaderPath } from '../src/';
+import type { createBeacon } from '../src/';
+import type { setRetryHeaderPath } from '../src/';
 import { log } from './utils';
 
 expect.extend({
@@ -28,7 +28,7 @@ expect.extend({
 
 declare global {
   interface Window {
-    beacon: typeof beaconType;
+    createBeacon: typeof createBeacon;
     setRetryHeaderPath: typeof setRetryHeaderPath;
   }
   namespace jest {
@@ -42,9 +42,9 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
-self.beacon = beacon;
-self.__DEBUG_BEACON_TRANSPORTER = true;
+self.createBeacon = createBeacon;
 self.setRetryHeaderPath = setRetryHeaderPath;
+self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
 };
 
@@ -110,7 +110,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         response.end('hello');
       });
       const result = await page.evaluate((url) => {
-        return window.beacon(`${url}/api`, 'hello');
+        const { beacon } = window.createBeacon();
+        return beacon(`${url}/api`, 'hello');
       }, server.url);
       expect(result).toBeUndefined;
       await waitForExpect(() => {
@@ -125,7 +126,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         response.end('hello');
       });
       await page.evaluate((url) => {
-        return window.beacon(`${url}/api`, 's'.repeat(64_100));
+        return window.createBeacon().beacon(`${url}/api`, 's'.repeat(64_100));
       }, server.url);
 
       await waitForExpect(() => {
@@ -151,7 +152,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         await page.evaluate(
           ([url, eventName]) => {
             document.addEventListener(eventName, function () {
-              window.beacon(`${url}/api`, 'closing');
+              window.createBeacon().beacon(`${url}/api`, 'closing');
             });
           },
           [server.url, getCloseTabEvent(name)]
@@ -174,7 +175,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url, eventName]) => {
           document.addEventListener(eventName, function () {
-            window.beacon(`${url}/api`, 's'.repeat(64_100));
+            window.createBeacon().beacon(`${url}/api`, 's'.repeat(64_100));
           });
         },
         [server.url, getCloseTabEvent(name)]
@@ -200,9 +201,12 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       // });
       await page.evaluate(
         ([url]) => {
-          return window.beacon(`${url}/api`, 'hi', {
-            retry: { limit: 2 },
+          const { beacon } = window.createBeacon({
+            beaconConfig: {
+              retry: { limit: 2 },
+            },
           });
+          return beacon(`${url}/api`, 'hi');
         },
         [server.url]
       );
@@ -229,12 +233,20 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url]) => {
           window.setRetryHeaderPath('x-retry-context');
-          window.beacon(`${url}/api/retry`, 'hi', {
-            retry: { limit: 2, inMemoryRetryStatusCodes: [502] },
-          });
-          window.beacon(`${url}/api/noretry`, 'hi', {
-            retry: { limit: 2 },
-          });
+          window
+            .createBeacon({
+              beaconConfig: {
+                retry: { limit: 2, inMemoryRetryStatusCodes: [502] },
+              },
+            })
+            .beacon(`${url}/api/retry`, 'hi');
+          window
+            .createBeacon({
+              beaconConfig: {
+                retry: { limit: 2 },
+              },
+            })
+            .beacon(`${url}/api/noretry`, 'hi');
         },
         [server.url]
       );
@@ -265,13 +277,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       });
       await page.evaluate(
         ([url]) => {
-          window.beacon(`${url}/api/retry`, 'hi', {
-            retry: {
-              limit: 2,
-              inMemoryRetryStatusCodes: [502],
-              calculateRetryDelay: (countLeft) => (countLeft === 2 ? 1 : 2000),
+          const { beacon } = window.createBeacon({
+            beaconConfig: {
+              retry: {
+                limit: 2,
+                inMemoryRetryStatusCodes: [502],
+                calculateRetryDelay: (countLeft) =>
+                  countLeft === 2 ? 1 : 2000,
+              },
             },
           });
+          beacon(`${url}/api/retry`, 'hi');
         },
         [server.url]
       );
