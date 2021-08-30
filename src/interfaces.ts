@@ -10,7 +10,7 @@ export interface BeaconInit {
  * @public
  */
 export interface RetryDBConfig {
-  storeName: string;
+  dbName: string;
   headerName?: string;
   attemptLimit: number;
   maxNumber: number;

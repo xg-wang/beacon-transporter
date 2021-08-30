@@ -146,7 +146,7 @@ describe.each([
             retry: { limit: 0, persist: false, headerName: 'x-retry-context' },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -187,7 +187,7 @@ describe.each([
             retry: { limit: 0, persist: true, headerName: 'x-retry-context' },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -245,7 +245,7 @@ describe.each([
             },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 1,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -292,7 +292,7 @@ describe.each([
             },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 1,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -338,7 +338,7 @@ describe.each([
             },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -389,7 +389,7 @@ describe.each([
             },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -427,7 +427,7 @@ describe.each([
             },
           },
           retryDBConfig: {
-            storeName: 'default',
+            dbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
