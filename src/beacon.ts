@@ -169,7 +169,7 @@ function prepareConfig(init: BeaconInit): Required<BeaconInit> {
     throttleWait: 5 * 60 * 1000,
   };
   const retryHeader = beaconConfig.retry.headerName;
-  if (retryHeader) {
+  if (retryHeader && !retryDBConfig.headerName) {
     retryDBConfig.headerName = retryHeader;
   }
   return { beaconConfig, retryDBConfig };

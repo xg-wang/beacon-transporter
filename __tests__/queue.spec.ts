@@ -88,7 +88,7 @@ describe.each([
     await server.close();
   });
 
-  it.only('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
+  it('stores beacon data if network having issue after all in-memory retires fail, retry on next successful response', async () => {
     const results = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
