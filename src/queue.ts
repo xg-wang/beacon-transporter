@@ -50,8 +50,8 @@ class QueueImpl implements Queue {
 
   constructor(private config: RetryDBConfig) {
     this.withStore = createStore(
-      'beacon-transporter',
-      config.storeName,
+      config.dbName,
+      'beacons',
       'timestamp'
     );
     this.throttledReplay = throttle(

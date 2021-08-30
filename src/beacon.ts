@@ -162,7 +162,7 @@ function prepareConfig(init: BeaconInit): Required<BeaconInit> {
     },
   };
   const retryDBConfig = init.retryDBConfig || {
-    storeName: 'default',
+    dbName: 'beacon-transporter',
     attemptLimit: 3,
     maxNumber: 1000,
     batchEvictionNumber: 300,

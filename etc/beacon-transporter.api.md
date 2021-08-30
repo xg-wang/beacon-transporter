@@ -88,11 +88,11 @@ export interface RetryDBConfig {
     // (undocumented)
     batchEvictionNumber: number;
     // (undocumented)
+    dbName: string;
+    // (undocumented)
     headerName?: string;
     // (undocumented)
     maxNumber: number;
-    // (undocumented)
-    storeName: string;
     // (undocumented)
     throttleWait: number;
 }
