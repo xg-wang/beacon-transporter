@@ -18,7 +18,7 @@ export interface BeaconConfig {
 }
 
 // @public (undocumented)
-export type BeaconFunc = (url: string, body: string) => void;
+export type BeaconFunc = (url: string, body: string) => Promise<RetryRejection | RequestSuccess | undefined>;
 
 // @public (undocumented)
 export interface BeaconInit {
@@ -37,25 +37,25 @@ export function createBeacon(init?: BeaconInit): {
 // @public (undocumented)
 export interface NetworkRetryRejection {
     // (undocumented)
-    body: string;
-    // (undocumented)
     statusCode: undefined;
     // (undocumented)
     type: 'network';
+}
+
+// @public (undocumented)
+export interface RequestSuccess {
     // (undocumented)
-    url: string;
+    statusCode: 200;
+    // (undocumented)
+    type: 'success';
 }
 
 // @public (undocumented)
 export interface ResponseRetryRejection {
     // (undocumented)
-    body: string;
-    // (undocumented)
     statusCode: number;
     // (undocumented)
     type: 'response';
-    // (undocumented)
-    url: string;
 }
 
 // @public (undocumented)

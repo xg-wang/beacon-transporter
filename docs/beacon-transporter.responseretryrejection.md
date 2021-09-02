@@ -15,8 +15,6 @@ export interface ResponseRetryRejection
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [body](./beacon-transporter.responseretryrejection.body.md) | string |  |
 |  [statusCode](./beacon-transporter.responseretryrejection.statuscode.md) | number |  |
 |  [type](./beacon-transporter.responseretryrejection.type.md) | 'response' |  |
-|  [url](./beacon-transporter.responseretryrejection.url.md) | string |  |
 

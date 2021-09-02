@@ -41,8 +41,6 @@ export interface BeaconConfig {
 export interface NetworkRetryRejection {
   type: 'network';
   statusCode: undefined;
-  url: string;
-  body: string;
 }
 
 /**
@@ -51,8 +49,6 @@ export interface NetworkRetryRejection {
 export interface ResponseRetryRejection {
   type: 'response';
   statusCode: number;
-  url: string;
-  body: string;
 }
 
 /**
@@ -61,6 +57,14 @@ export interface ResponseRetryRejection {
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 /**
+  * @public
+  */
+export interface RequestSuccess {
+  type: 'success';
+  statusCode: 200;
+}
+
+/**
  * @public
  */
-export type BeaconFunc = (url: string, body: string) => void;
+export type BeaconFunc = (url: string, body: string) => Promise<RetryRejection | RequestSuccess | undefined>;

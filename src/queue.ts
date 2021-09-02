@@ -49,11 +49,7 @@ class QueueImpl implements Queue {
   private withStore: WithStore;
 
   constructor(private config: RetryDBConfig) {
-    this.withStore = createStore(
-      config.dbName,
-      'beacons',
-      'timestamp'
-    );
+    this.withStore = createStore(config.dbName, 'beacons', 'timestamp');
     this.throttledReplay = throttle(
       this.replayEntries.bind(this),
       config.throttleWait
@@ -83,9 +79,10 @@ class QueueImpl implements Queue {
             url,
             body,
             createHeaders(this.config.headerName, attemptCount, statusCode)
-          )
-            .then(() => this.replayEntries())
-            .catch(() => {
+          ).then((maybeError) => {
+            if (!maybeError || maybeError.type === 'success') {
+              this.replayEntries();
+            } else {
               const debugInfo = JSON.stringify(
                 {
                   url,
@@ -115,7 +112,8 @@ class QueueImpl implements Queue {
                 this.config,
                 this.withStore
               );
-            });
+            }
+          });
         }
       })
       .catch((reason: DOMException) => {
