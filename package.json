@@ -1,6 +1,6 @@
 {
   "name": "beacon-transporter",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Reliable beacon API for the browser",
   "license": "MIT",
   "author": "Thomas Wang <hi@xgwang.me>",
