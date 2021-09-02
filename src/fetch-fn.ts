@@ -1,6 +1,8 @@
+import { RequestSuccess, RetryRejection } from './interfaces';
 import { createRequestInit } from './utils';
 
-export const supportFetch = typeof globalThis !== 'undefined' && 'fetch' in globalThis;
+export const supportFetch =
+  typeof globalThis !== 'undefined' && 'fetch' in globalThis;
 
 export const supportKeepaliveFetch =
   supportFetch && 'keepalive' in new Request('');
@@ -12,8 +14,8 @@ function keepaliveFetch(
   url: string,
   body: string,
   headers: HeadersInit
-): Promise<Response> {
-  return new Promise((resolve, reject) => {
+): Promise<RequestSuccess | RetryRejection> {
+  return new Promise((resolve) => {
     fetch(url, createRequestInit({ body, keepalive: true, headers }))
       .catch(() => {
         // keepalive true fetch can throw error if body exceeds 64kb
@@ -25,12 +27,15 @@ function keepaliveFetch(
       .then(
         (response) => {
           if (response.ok) {
-            resolve(response);
+            resolve({ type: 'success', statusCode: 200 });
           } else {
-            reject({ type: 'response', statusCode: response.status });
+            resolve({
+              type: 'response',
+              statusCode: response.status,
+            });
           }
         },
-        () => reject({ type: 'network' })
+        () => resolve({ type: 'network', statusCode: undefined })
       );
   });
 }
@@ -39,8 +44,8 @@ function fallbackFetch(
   url: string,
   body: string,
   headers: HeadersInit
-): Promise<Response | null> {
-  return new Promise((resolve, reject) => {
+): Promise<RequestSuccess | RetryRejection | undefined> {
+  return new Promise((resolve) => {
     if (supportSendBeacon) {
       let result = false;
       try {
@@ -51,22 +56,25 @@ function fallbackFetch(
       // if the user agent is not able to successfully queue the data for transfer,
       // send the payload with fetch api instead
       if (result) {
-        resolve(null);
+        resolve(undefined);
         return;
       }
     }
     fetch(url, createRequestInit({ body, keepalive: false, headers })).then(
       (response) => {
         if (response.ok) {
-          resolve(response);
+          resolve({
+            type: 'success',
+            statusCode: 200,
+          });
         } else {
-          reject({
+          resolve({
             type: 'response',
             statusCode: response.status,
           });
         }
       },
-      () => reject({ type: 'network' })
+      () => resolve({ type: 'network', statusCode: undefined })
     );
   });
 }

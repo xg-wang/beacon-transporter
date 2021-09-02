@@ -25,6 +25,7 @@ Reliable beacon API for the browser
 |  [BeaconConfig](./beacon-transporter.beaconconfig.md) |  |
 |  [BeaconInit](./beacon-transporter.beaconinit.md) |  |
 |  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
+|  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |
 |  [ResponseRetryRejection](./beacon-transporter.responseretryrejection.md) |  |
 |  [RetryDBConfig](./beacon-transporter.retrydbconfig.md) |  |
 

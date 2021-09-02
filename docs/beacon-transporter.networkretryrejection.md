@@ -15,8 +15,6 @@ export interface NetworkRetryRejection
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [body](./beacon-transporter.networkretryrejection.body.md) | string |  |
 |  [statusCode](./beacon-transporter.networkretryrejection.statuscode.md) | undefined |  |
 |  [type](./beacon-transporter.networkretryrejection.type.md) | 'network' |  |
-|  [url](./beacon-transporter.networkretryrejection.url.md) | string |  |
 

@@ -100,7 +100,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await server.close();
     });
 
-    it('should fetch', async () => {
+    it('should resolve to success type object', async () => {
       const results = [];
       server.post('/api', (request, response) => {
         results.push(request.body);
@@ -110,10 +110,55 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         const { beacon } = window.createBeacon();
         return beacon(`${url}/api`, 'hello');
       }, server.url);
-      expect(result).toBeUndefined;
+      if (name === 'firefox') {
+        expect(result).toBeUndefined();
+      } else {
+        expect(result).toEqual({
+          type: 'success',
+          statusCode: 200,
+        });
+      }
       await waitForExpect(() => {
         expect(results).toEqual(['hello']);
       });
+    });
+
+    it('should resolve to rejection reason type object', async () => {
+      const results = [];
+      server.post('/api', (request, response) => {
+        results.push(request.body);
+        response.status(429).end('hello');
+      });
+      const result = await page.evaluate((url) => {
+        const { beacon } = window.createBeacon();
+        return beacon(`${url}/api`, 'hello');
+      }, server.url);
+      if (name === 'firefox') {
+        expect(result).toBeUndefined();
+      } else {
+        expect(result).toEqual({
+          type: 'response',
+          statusCode: 429,
+        });
+      }
+      await waitForExpect(() => {
+        expect(results).toEqual(['hello']);
+      });
+
+      await page.route('**/api', (route) => {
+        return route.abort('failed');
+      });
+      const networkResult = await page.evaluate((url) => {
+        const { beacon } = window.createBeacon();
+        return beacon(`${url}/api`, 'hello');
+      }, server.url);
+      if (name === 'firefox') {
+        expect(networkResult).toBeUndefined();
+      } else {
+        expect(networkResult).toEqual({
+          type: 'network',
+        });
+      }
     });
 
     it('should send payload larger than 64kb', async () => {
@@ -232,7 +277,11 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           window
             .createBeacon({
               beaconConfig: {
-                retry: { limit: 2, inMemoryRetryStatusCodes: [502], headerName: 'x-retry-context' },
+                retry: {
+                  limit: 2,
+                  inMemoryRetryStatusCodes: [502],
+                  headerName: 'x-retry-context',
+                },
               },
             })
             .beacon(`${url}/api/retry`, 'hi');
