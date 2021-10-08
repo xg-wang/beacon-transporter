@@ -130,6 +130,56 @@ describe.each([
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 3 }));
   });
 
+  it('can use requestIdleCallback for firing retry requests', async () => {
+    const results = [];
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = { header: headers['x-retry-context'] };
+      results.push(payload);
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    let numberOfBeacons = 0;
+    await page.route('**/api/*', (route) => {
+      // fetch will fallback to keepalive false and try 2nd time
+      if (++numberOfBeacons > (contentLength === '>64kb' ? 3 : 2 * 3)) {
+        log('Continue route request');
+        return route.continue();
+      } else {
+        log('Abort route request');
+        return route.abort();
+      }
+    });
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: { limit: 2, persist: true, headerName: 'x-retry-context' },
+          },
+          retryDBConfig: {
+            dbName: 'beacon-transporter',
+            attemptLimit: 3,
+            maxNumber: 1000,
+            batchEvictionNumber: 300,
+            throttleWait: 5 * 60 * 1000,
+            useIdle: () => true,
+          },
+        });
+        beacon(`${url}/api/200`, bodyPayload);
+        setTimeout(() => {
+          beacon(`${url}/api/200`, bodyPayload);
+        }, 2000 + 4000 + 500);
+      },
+      [server.url, createBody(contentLength)]
+    );
+    await waitForExpect(() => {
+      expect(results.length).toBe(2);
+    }, 7500);
+    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 3 + 2 : 2 * 3 + 2);
+    // attempt count includes in-memory attempts
+    expect(results[1].header).toEqual(JSON.stringify({ attempt: 3 }));
+  });
+
   it('retry with reading IDB skipped if retry.persist=false', async () => {
     const results = [];
     server.post('/api/:status', ({ params, headers }, res) => {

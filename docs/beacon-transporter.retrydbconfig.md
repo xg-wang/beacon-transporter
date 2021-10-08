@@ -21,4 +21,5 @@ export interface RetryDBConfig
 |  [headerName?](./beacon-transporter.retrydbconfig.headername.md) | string | <i>(Optional)</i> |
 |  [maxNumber](./beacon-transporter.retrydbconfig.maxnumber.md) | number |  |
 |  [throttleWait](./beacon-transporter.retrydbconfig.throttlewait.md) | number |  |
+|  [useIdle?](./beacon-transporter.retrydbconfig.useidle.md) | () =&gt; boolean | <i>(Optional)</i> |
 
