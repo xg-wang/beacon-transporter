@@ -79,6 +79,32 @@ function fallbackFetch(
   });
 }
 
-const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
+export const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
 
-export default fetchFn;
+/**
+ * Fetch when browser is idle so retry does not impact performance
+ */
+export function idleFetch(
+  url: string,
+  body: string,
+  headers: HeadersInit
+): Promise<RequestSuccess | RetryRejection | undefined> {
+  if (typeof requestIdleCallback === 'undefined') {
+    return fetchFn(url, body, headers);
+  }
+  return new Promise((resolve) => {
+    const runTask = (): void => {
+      requestIdleCallback(
+        (deadline) => {
+          if (deadline.timeRemaining() > 5 || deadline.didTimeout) {
+            resolve(fetchFn(url, body, headers));
+          } else {
+            runTask();
+          }
+        },
+        { timeout: 10000 }
+      );
+    };
+    runTask();
+  });
+}

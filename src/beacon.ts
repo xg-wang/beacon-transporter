@@ -1,4 +1,4 @@
-import fetchFn, { supportFetch } from './fetch-fn';
+import { fetchFn, supportFetch } from './fetch';
 import type {
   BeaconConfig,
   BeaconFunc,
