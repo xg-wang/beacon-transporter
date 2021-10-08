@@ -8,7 +8,7 @@ import {
   shift,
 } from 'idb-queue';
 
-import { idleFetch} from './fetch';
+import { fetchFn,idleFetch } from './fetch';
 import { RetryDBConfig } from './interfaces';
 import { createHeaders, debug, logError } from './utils';
 
@@ -75,7 +75,9 @@ class QueueImpl implements Queue {
               this.config.headerName
             )}; attemptCount: ${attemptCount}`
           );
-          return idleFetch(
+          const shouldUseIdle = this.config.useIdle?.();
+          const fetch = shouldUseIdle ? idleFetch : fetchFn;
+          return fetch(
             url,
             body,
             createHeaders(this.config.headerName, attemptCount, statusCode)

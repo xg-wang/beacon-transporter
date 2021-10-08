@@ -16,6 +16,7 @@ export interface RetryDBConfig {
   maxNumber: number;
   batchEvictionNumber: number;
   throttleWait: number;
+  useIdle?: () => boolean;
 }
 
 /**

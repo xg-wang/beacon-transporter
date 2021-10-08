@@ -95,6 +95,8 @@ export interface RetryDBConfig {
     maxNumber: number;
     // (undocumented)
     throttleWait: number;
+    // (undocumented)
+    useIdle?: () => boolean;
 }
 
 // @public (undocumented)
