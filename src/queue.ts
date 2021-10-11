@@ -8,7 +8,7 @@ import {
   shift,
 } from 'idb-queue';
 
-import { fetchFn,idleFetch } from './fetch';
+import { fetchFn, idleFetch } from './fetch';
 import { RetryDBConfig } from './interfaces';
 import { createHeaders, debug, logError } from './utils';
 
@@ -27,14 +27,22 @@ interface Queue {
   onNotify(): void;
   push(entry: RetryEntry): void;
   clear(): Promise<void>;
-  setThrottleWait(wait: number): void;
   peek(count: number): Promise<RetryEntry[]>;
   peekBack(count: number): Promise<RetryEntry[]>;
 }
 
-function throttle(fn: () => void, timeFrame: number): () => void {
+interface ThrottleControl {
+  throttledFn: () => void;
+  resetThrottle: () => void;
+}
+
+/**
+ * Create throttle control for executing function that is throttled,
+ * and support resetting the throttling time
+ */
+function throttle(fn: () => void, timeFrame: number): ThrottleControl {
   let lastTime = 0;
-  return function () {
+  const throttledFn = (): void => {
     const now = Date.now();
     if (now - lastTime > timeFrame) {
       debug('[throttle] Run fn() at ' + String(now));
@@ -42,26 +50,51 @@ function throttle(fn: () => void, timeFrame: number): () => void {
       lastTime = now;
     }
   };
+  const resetThrottle = (): void => {
+    lastTime = 0;
+  };
+  return {
+    throttledFn,
+    resetThrottle,
+  };
 }
 
 class QueueImpl implements Queue {
-  private throttledReplay: () => void;
+  private throttleControl: ThrottleControl;
   private withStore: WithStore;
 
   constructor(private config: RetryDBConfig) {
     this.withStore = createStore(config.dbName, 'beacons', 'timestamp');
-    this.throttledReplay = throttle(
+    this.throttleControl = throttle(
       this.replayEntries.bind(this),
       config.throttleWait
     );
   }
 
-  public setThrottleWait(wait: number): void {
-    this.throttledReplay = throttle(this.replayEntries.bind(this), wait);
+  public onNotify(): void {
+    this.throttleControl.throttledFn();
   }
 
-  public onNotify(): void {
-    this.throttledReplay();
+  public push(entry: RetryEntry): void {
+    debug('Persisting to DB ' + entry.url);
+    pushIfNotClearing(entry, this.config, this.withStore)
+      .then(() => {
+        this.throttleControl.resetThrottle();
+        debug('push completed');
+      })
+      .catch(() => logError('push failed'));
+  }
+
+  public clear(): Promise<void> {
+    return clear(this.withStore);
+  }
+
+  public peek(count = 1): Promise<RetryEntry[]> {
+    return peek<RetryEntry>(count, this.withStore);
+  }
+
+  public peekBack(count = 1): Promise<RetryEntry[]> {
+    return peekBack<RetryEntry>(count, this.withStore);
   }
 
   private replayEntries(): void {
@@ -124,26 +157,6 @@ class QueueImpl implements Queue {
         }
       });
   }
-
-  // throttle retry timer when pushed
-  public push(entry: RetryEntry): void {
-    debug('Persisting to DB ' + entry.url);
-    pushIfNotClearing(entry, this.config, this.withStore)
-      .then(() => debug('push completed'))
-      .catch(() => logError('push failed'));
-  }
-
-  public clear(): Promise<void> {
-    return clear(this.withStore);
-  }
-
-  public peek(count = 1): Promise<RetryEntry[]> {
-    return peek<RetryEntry>(count, this.withStore);
-  }
-
-  public peekBack(count = 1): Promise<RetryEntry[]> {
-    return peekBack<RetryEntry>(count, this.withStore);
-  }
 }
 
 class NoopQueue {
@@ -151,9 +164,6 @@ class NoopQueue {
     // noop
   }
   push(): void {
-    // noop
-  }
-  setThrottleWait(): void {
     // noop
   }
   clear(): Promise<void> {
