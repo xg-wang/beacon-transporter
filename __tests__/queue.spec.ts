@@ -244,32 +244,42 @@ describe.each([
             throttleWait: 2000,
           },
         });
-        beacon(`${url}/api/429`, bodyPayload);
+
+        beacon(`${url}/api/200`, bodyPayload);
+        // push to DB will reset throttle timer
+        setTimeout(() => {
+          beacon(`${url}/api/429`, bodyPayload);
+        }, 500);
         setTimeout(() => {
           beacon(`${url}/api/200`, bodyPayload);
-        }, 1000);
+        }, 500 + 1000);
         // waiting, will not trigger retry
         setTimeout(() => {
           beacon(`${url}/api/200`, bodyPayload);
-        }, 2000);
+        }, 500 + 1000 + 1000);
         // throttling finished, will trigger retry
-        // 1000 + 2000 (throttle wait) + grace period
+        // initial + (throttle wait) + (grace period)
         setTimeout(() => {
           beacon(`${url}/api/200`, bodyPayload);
-        }, 3100);
+        }, 500 + 1000 + 2000 + 100);
       },
       [server.url, createBody(contentLength)]
     );
     await waitForExpect(() => {
-      expect(results.length).toBe(6);
+      expect(results.length).toBe(7);
     });
-    expect(results[0].status).toBe(429);
-    expect(results[0].header).toBeUndefined;
-    expect(results[1].status).toBe(200);
-    expect(results[2].header).toEqual(
+    expect(results[0].status).toBe(200);
+    expect(results[1].status).toBe(429);
+    expect(results[1].header).toBeUndefined;
+    expect(results[2].status).toBe(200);
+    expect(results[3].status).toBe(429);
+    expect(results[3].header).toEqual(
       JSON.stringify({ attempt: 1, errorCode: 429 })
     );
-    expect(results[5].header).toEqual(
+    expect(results[4].status).toBe(200);
+    expect(results[5].status).toBe(200);
+    expect(results[6].status).toBe(429);
+    expect(results[6].header).toEqual(
       JSON.stringify({ attempt: 2, errorCode: 429 })
     );
   });
