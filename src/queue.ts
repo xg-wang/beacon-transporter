@@ -17,7 +17,8 @@ import { createHeaders, debug, logError } from './utils';
  */
 export interface RetryEntry {
   url: string;
-  body: string;
+  body: BodyInit;
+  headers?: Record<string, string>;
   statusCode?: number;
   timestamp: number;
   attemptCount: number;
@@ -102,7 +103,7 @@ class QueueImpl implements Queue {
     shift<RetryEntry>(1, this.withStore)
       .then((entries) => {
         if (entries.length > 0) {
-          const { url, body, timestamp, statusCode, attemptCount } = entries[0];
+          const { url, body, headers, timestamp, statusCode, attemptCount } = entries[0];
           debug(
             `header: ${String(
               this.config.headerName
@@ -113,7 +114,7 @@ class QueueImpl implements Queue {
           return fetch(
             url,
             body,
-            createHeaders(this.config.headerName, attemptCount, statusCode)
+            createHeaders(headers, this.config.headerName, attemptCount, statusCode)
           ).then((maybeError) => {
             if (!maybeError || maybeError.type === 'success') {
               this.replayEntries();

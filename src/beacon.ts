@@ -28,7 +28,7 @@ class Beacon {
 
   constructor(
     private url: string,
-    private body: string,
+    private body: BodyInit,
     private config: BeaconConfig,
     private db: RetryDB
   ) {
@@ -39,12 +39,15 @@ class Beacon {
       ((retryCountLeft) => this.getAttemptCount(retryCountLeft) * 2000);
   }
 
-  send(): Promise<RetryRejection | RequestSuccess | undefined> {
+  send(
+    headers: Record<string, string> = {}
+  ): Promise<RetryRejection | RequestSuccess | undefined> {
     this.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
-      (headers: HeadersInit) => fetchFn(this.url, this.body, headers),
-      initialRetryCountLeft
+      (headers: Record<string, string>) => fetchFn(this.url, this.body, headers),
+      initialRetryCountLeft,
+      headers
     ).finally(() => {
       debug('beacon finished');
       this.db.removeOnClear(this.onClearCallback);
@@ -67,14 +70,15 @@ class Beacon {
    */
   private retry(
     fn: (
-      headers: HeadersInit
+      headers: Record<string, string>
     ) => Promise<RetryRejection | RequestSuccess | undefined>,
     retryCountLeft: number,
-    errorCode?: number
+    headers: Record<string, string>,
+    errorCode?: number,
   ): Promise<RetryRejection | RequestSuccess | undefined> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
-      createHeaders(this.config.retry.headerName, attemptCount, errorCode)
+      createHeaders(headers, this.config.retry.headerName, attemptCount, errorCode)
     ).then((maybeError) => {
       if (typeof maybeError === 'undefined' || maybeError.type === 'success') {
         if (!this.isClearQueuePending && this.config.retry.persist) {
@@ -86,6 +90,7 @@ class Beacon {
           this.db.pushToQueue({
             url: this.url,
             body: this.body,
+            headers,
             statusCode: maybeError.statusCode,
             timestamp: this.timestamp,
             attemptCount: this.getAttemptCount(retryCountLeft),
@@ -94,7 +99,7 @@ class Beacon {
           const waitMs = this.calculateRetryDelay(retryCountLeft);
           debug(`in memory retry in ${waitMs}ms`);
           return sleep(waitMs).then(() =>
-            this.retry(fn, retryCountLeft - 1, maybeError.statusCode)
+            this.retry(fn, retryCountLeft - 1, headers, maybeError.statusCode)
           );
         }
       }
@@ -151,11 +156,11 @@ export function createBeacon(init: BeaconInit = {}): {
 } {
   const { beaconConfig, retryDBConfig } = prepareConfig(init);
   const database = new RetryDB(retryDBConfig);
-  const beacon: BeaconFunc = (url, body) => {
+  const beacon: BeaconFunc = (url, body, headers) => {
     if (!supportFetch) {
       return Promise.resolve(undefined);
     }
-    return new Beacon(url, body, beaconConfig, database).send();
+    return new Beacon(url, body, beaconConfig, database).send(headers);
   };
   return { beacon, database };
 }

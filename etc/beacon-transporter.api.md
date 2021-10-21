@@ -18,7 +18,7 @@ export interface BeaconConfig {
 }
 
 // @public (undocumented)
-export type BeaconFunc = (url: string, body: string) => Promise<RetryRejection | RequestSuccess | undefined>;
+export type BeaconFunc = (url: string, body: BodyInit, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
 
 // @public (undocumented)
 export interface BeaconInit {

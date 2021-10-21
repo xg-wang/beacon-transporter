@@ -58,8 +58,8 @@ export interface ResponseRetryRejection {
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 /**
-  * @public
-  */
+ * @public
+ */
 export interface RequestSuccess {
   type: 'success';
   statusCode: 200;
@@ -68,4 +68,8 @@ export interface RequestSuccess {
 /**
  * @public
  */
-export type BeaconFunc = (url: string, body: string) => Promise<RetryRejection | RequestSuccess | undefined>;
+export type BeaconFunc = (
+  url: string,
+  body: BodyInit,
+  headers?: Record<string, string>
+) => Promise<RetryRejection | RequestSuccess | undefined>;

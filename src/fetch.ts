@@ -12,8 +12,8 @@ const supportSendBeacon =
 
 function keepaliveFetch(
   url: string,
-  body: string,
-  headers: HeadersInit
+  body: BodyInit,
+  headers: Record<string, string>
 ): Promise<RequestSuccess | RetryRejection> {
   return new Promise((resolve) => {
     fetch(url, createRequestInit({ body, keepalive: true, headers }))
@@ -42,8 +42,8 @@ function keepaliveFetch(
 
 function fallbackFetch(
   url: string,
-  body: string,
-  headers: HeadersInit
+  body: BodyInit,
+  headers: Record<string, string>
 ): Promise<RequestSuccess | RetryRejection | undefined> {
   return new Promise((resolve) => {
     if (supportSendBeacon) {
@@ -86,8 +86,8 @@ export const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
  */
 export function idleFetch(
   url: string,
-  body: string,
-  headers: HeadersInit
+  body: BodyInit,
+  headers: Record<string, string>
 ): Promise<RequestSuccess | RetryRejection | undefined> {
   if (typeof requestIdleCallback === 'undefined') {
     return fetchFn(url, body, headers);
