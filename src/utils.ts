@@ -4,33 +4,38 @@ declare global {
   }
 }
 
-export function createHeaders(headerName: string | undefined, attempt: number, errorCode?: number): HeadersInit {
-  if (!headerName || attempt < 1) return {};
-  const headersInit = {
-    [headerName]: JSON.stringify({ attempt, errorCode }),
-  };
-  return headersInit;
+export function createHeaders(
+  headers: Record<string, string> = {},
+  headerName: string | undefined,
+  attempt: number,
+  errorCode?: number
+): Record<string, string> {
+  if (!headerName || attempt < 1) return headers;
+  headers[headerName] = JSON.stringify({ attempt, errorCode });
+  return headers;
 }
 
 /**
-  * @public
-  */
+ * @public
+ */
 export function createRequestInit({
   body,
   keepalive,
   headers,
 }: {
-  body: string;
+  body: BodyInit;
   keepalive: boolean;
-  headers: HeadersInit;
+  headers: Record<string, string>;
 }): RequestInit {
-  headers = new Headers(headers);
-  headers.set('content-type', 'text/plain;charset=UTF-8');
+  const finalHeaders = new Headers(headers);
+  if (!finalHeaders.get('content-type')) {
+    finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
+  }
   return {
     body,
     keepalive,
     credentials: 'same-origin',
-    headers,
+    headers: finalHeaders,
     method: 'POST',
     mode: 'cors',
   };
