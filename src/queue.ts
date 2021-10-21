@@ -17,7 +17,7 @@ import { createHeaders, debug, logError } from './utils';
  */
 export interface RetryEntry {
   url: string;
-  body: BodyInit;
+  body: string;
   headers?: Record<string, string>;
   statusCode?: number;
   timestamp: number;
@@ -64,7 +64,7 @@ class QueueImpl implements Queue {
   private throttleControl: ThrottleControl;
   private withStore: WithStore;
 
-  constructor(private config: RetryDBConfig) {
+  constructor(private config: RetryDBConfig, private compress = false) {
     this.withStore = createStore(config.dbName, 'beacons', 'timestamp');
     this.throttleControl = throttle(
       this.replayEntries.bind(this),
@@ -114,7 +114,8 @@ class QueueImpl implements Queue {
           return fetch(
             url,
             body,
-            createHeaders(headers, this.config.headerName, attemptCount, statusCode)
+            createHeaders(headers, this.config.headerName, attemptCount, statusCode),
+            this.compress
           ).then((maybeError) => {
             if (!maybeError || maybeError.type === 'success') {
               this.replayEntries();
@@ -188,8 +189,8 @@ export class RetryDB {
   private queue: Queue;
   private beaconListeners = new Set<() => void>();
 
-  constructor(config: RetryDBConfig) {
-    this.queue = RetryDB.hasSupport ? new QueueImpl(config) : new NoopQueue();
+  constructor(config: RetryDBConfig, compress = false) {
+    this.queue = RetryDB.hasSupport ? new QueueImpl(config, compress) : new NoopQueue();
   }
 
   pushToQueue(entry: RetryEntry): void {

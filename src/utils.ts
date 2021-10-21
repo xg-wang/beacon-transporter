@@ -1,3 +1,5 @@
+import { gzipSync } from 'fflate';
+
 declare global {
   interface Window {
     __DEBUG_BEACON_TRANSPORTER?: boolean;
@@ -22,15 +24,26 @@ export function createRequestInit({
   body,
   keepalive,
   headers,
+  compress
 }: {
-  body: BodyInit;
+  body: string;
   keepalive: boolean;
   headers: Record<string, string>;
+  compress: boolean;
 }): RequestInit {
   const finalHeaders = new Headers(headers);
   if (!finalHeaders.get('content-type')) {
     finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
   }
+
+  let finalBody;
+  if (compress && typeof (TextEncoder) !== 'undefined') {
+    finalBody = gzipSync(new TextEncoder().encode(body));
+    finalHeaders.set('content-encoding', 'gzip');
+  } else {
+    finalBody = body;
+  }
+
   return {
     body,
     keepalive,

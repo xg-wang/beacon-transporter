@@ -12,16 +12,17 @@ const supportSendBeacon =
 
 function keepaliveFetch(
   url: string,
-  body: BodyInit,
-  headers: Record<string, string>
+  body: string,
+  headers: Record<string, string>,
+  compress: boolean
 ): Promise<RequestSuccess | RetryRejection> {
   return new Promise((resolve) => {
-    fetch(url, createRequestInit({ body, keepalive: true, headers }))
+    fetch(url, createRequestInit({ body, keepalive: true, headers, compress }))
       .catch(() => {
         // keepalive true fetch can throw error if body exceeds 64kb
         return fetch(
           url,
-          createRequestInit({ body, keepalive: false, headers })
+          createRequestInit({ body, keepalive: false, headers, compress })
         );
       })
       .then(
@@ -42,8 +43,9 @@ function keepaliveFetch(
 
 function fallbackFetch(
   url: string,
-  body: BodyInit,
-  headers: Record<string, string>
+  body: string,
+  headers: Record<string, string>,
+  compress: boolean
 ): Promise<RequestSuccess | RetryRejection | undefined> {
   return new Promise((resolve) => {
     if (supportSendBeacon) {
@@ -60,7 +62,7 @@ function fallbackFetch(
         return;
       }
     }
-    fetch(url, createRequestInit({ body, keepalive: false, headers })).then(
+    fetch(url, createRequestInit({ body, keepalive: false, headers, compress })).then(
       (response) => {
         if (response.ok) {
           resolve({
@@ -86,18 +88,19 @@ export const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
  */
 export function idleFetch(
   url: string,
-  body: BodyInit,
-  headers: Record<string, string>
+  body: string,
+  headers: Record<string, string>,
+  compress: boolean
 ): Promise<RequestSuccess | RetryRejection | undefined> {
   if (typeof requestIdleCallback === 'undefined') {
-    return fetchFn(url, body, headers);
+    return fetchFn(url, body, headers, compress);
   }
   return new Promise((resolve) => {
     const runTask = (): void => {
       requestIdleCallback(
         (deadline) => {
           if (deadline.timeRemaining() > 5 || deadline.didTimeout) {
-            resolve(fetchFn(url, body, headers));
+            resolve(fetchFn(url, body, headers, compress));
           } else {
             runTask();
           }
