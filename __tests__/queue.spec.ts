@@ -554,7 +554,7 @@ describe.each([
     expect(storageAfterClear.length).toBe(0);
   });
 
-  it.only('gzip compress retry requests from previous session', async () => {
+  it('gzip compress retry requests from previous session', async () => {
     const results = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
