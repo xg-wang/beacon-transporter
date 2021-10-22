@@ -45,7 +45,7 @@ export function createRequestInit({
   }
 
   return {
-    body,
+    body: finalBody,
     keepalive,
     credentials: 'same-origin',
     headers: finalHeaders,

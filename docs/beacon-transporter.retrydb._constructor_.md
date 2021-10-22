@@ -9,7 +9,7 @@ Constructs a new instance of the `RetryDB` class
 <b>Signature:</b>
 
 ```typescript
-constructor(config: RetryDBConfig);
+constructor(config: RetryDBConfig, compress?: boolean);
 ```
 
 ## Parameters
@@ -17,4 +17,5 @@ constructor(config: RetryDBConfig);
 |  Parameter | Type | Description |
 |  --- | --- | --- |
 |  config | [RetryDBConfig](./beacon-transporter.retrydbconfig.md) |  |
+|  compress | boolean |  |
 

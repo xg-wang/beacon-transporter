@@ -16,5 +16,6 @@ export interface BeaconInit
 |  Property | Type | Description |
 |  --- | --- | --- |
 |  [beaconConfig?](./beacon-transporter.beaconinit.beaconconfig.md) | [BeaconConfig](./beacon-transporter.beaconconfig.md) | <i>(Optional)</i> |
+|  [compress?](./beacon-transporter.beaconinit.compress.md) | boolean | <i>(Optional)</i> |
 |  [retryDBConfig?](./beacon-transporter.beaconinit.retrydbconfig.md) | [RetryDBConfig](./beacon-transporter.retrydbconfig.md) | <i>(Optional)</i> |
 

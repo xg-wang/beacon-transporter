@@ -156,7 +156,7 @@ export function createBeacon(init: BeaconInit = {}): {
   database: RetryDB;
 } {
   const { beaconConfig, retryDBConfig, compress } = prepareConfig(init);
-  const database = new RetryDB(retryDBConfig);
+  const database = new RetryDB(retryDBConfig, compress);
   const beacon: BeaconFunc = (url, body, headers) => {
     if (!supportFetch) {
       return Promise.resolve(undefined);

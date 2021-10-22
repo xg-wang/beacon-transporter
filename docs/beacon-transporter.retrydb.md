@@ -15,7 +15,7 @@ export declare class RetryDB
 
 |  Constructor | Modifiers | Description |
 |  --- | --- | --- |
-|  [(constructor)(config)](./beacon-transporter.retrydb._constructor_.md) |  | Constructs a new instance of the <code>RetryDB</code> class |
+|  [(constructor)(config, compress)](./beacon-transporter.retrydb._constructor_.md) |  | Constructs a new instance of the <code>RetryDB</code> class |
 
 ## Properties
 
