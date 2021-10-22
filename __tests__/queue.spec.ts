@@ -553,4 +553,91 @@ describe.each([
     );
     expect(storageAfterClear.length).toBe(0);
   });
+
+  it.only('gzip compress retry requests from previous session', async () => {
+    const results = [];
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = {
+        status,
+        header: headers['x-retry-context'],
+        encoding: headers['content-encoding'],
+      };
+      results.push(payload);
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
+          },
+          retryDBConfig: {
+            dbName: 'test-database',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          },
+          compress: false, // explicitly set to false, which is the default
+        });
+        beacon(`${url}/api/429`, bodyPayload);
+      },
+      [server.url, createBody(contentLength)]
+    );
+
+    const page2 = await context.newPage();
+    await page2.goto(server.url);
+    await page2.addScriptTag(script);
+    page2.on('console', async (msg) => {
+      const msgs = [];
+      for (let i = 0; i < msg.args().length; ++i) {
+        if (pageClosedForConsoleLog) break;
+        msgs.push(await msg.args()[i].jsonValue());
+      }
+      log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
+    });
+    await page2.waitForFunction(
+      () => window.__DEBUG_BEACON_TRANSPORTER === true
+    );
+    await page2.evaluate(
+      ([url, bodyPayload]) => {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [429],
+              headerName: 'x-retry-context',
+            },
+          },
+          retryDBConfig: {
+            dbName: 'test-database',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          },
+          compress: true,
+        });
+        beacon(`${url}/api/200`, bodyPayload);
+      },
+      [server.url, createBody(contentLength)]
+    );
+
+    await waitForExpect(() => {
+      expect(results.length).toBe(3);
+    });
+    await page2.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+    expect(results.length).toBe(3);
+    expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+    expect(results.map((r) => r.encoding)).toEqual([undefined, 'gzip', 'gzip']);
+    await closePage(page2);
+  });
 });

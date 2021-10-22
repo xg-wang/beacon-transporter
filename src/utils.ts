@@ -24,7 +24,7 @@ export function createRequestInit({
   body,
   keepalive,
   headers,
-  compress
+  compress,
 }: {
   body: string;
   keepalive: boolean;
@@ -36,12 +36,10 @@ export function createRequestInit({
     finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
   }
 
-  let finalBody;
-  if (compress && typeof (TextEncoder) !== 'undefined') {
+  let finalBody: string | Uint8Array = body;
+  if (compress && typeof TextEncoder !== 'undefined') {
     finalBody = gzipSync(new TextEncoder().encode(body));
     finalHeaders.set('content-encoding', 'gzip');
-  } else {
-    finalBody = body;
   }
 
   return {
