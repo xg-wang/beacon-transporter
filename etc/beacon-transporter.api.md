@@ -4,6 +4,8 @@
 
 ```ts
 
+import { gzipSync } from 'fflate';
+
 // @public (undocumented)
 export interface BeaconConfig {
     // (undocumented)
@@ -18,12 +20,14 @@ export interface BeaconConfig {
 }
 
 // @public (undocumented)
-export type BeaconFunc = (url: string, body: BodyInit, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
+export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
 
 // @public (undocumented)
 export interface BeaconInit {
     // (undocumented)
     beaconConfig?: BeaconConfig;
+    // (undocumented)
+    compress?: boolean;
     // (undocumented)
     retryDBConfig?: RetryDBConfig;
 }
@@ -33,6 +37,8 @@ export function createBeacon(init?: BeaconInit): {
     beacon: BeaconFunc;
     database: RetryDB;
 };
+
+export { gzipSync }
 
 // @public (undocumented)
 export interface NetworkRetryRejection {
@@ -60,7 +66,7 @@ export interface ResponseRetryRejection {
 
 // @public (undocumented)
 export class RetryDB {
-    constructor(config: RetryDBConfig);
+    constructor(config: RetryDBConfig, compress?: boolean);
     // (undocumented)
     clearQueue(): Promise<void>;
     // (undocumented)

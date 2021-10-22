@@ -4,6 +4,7 @@
 export interface BeaconInit {
   beaconConfig?: BeaconConfig;
   retryDBConfig?: RetryDBConfig;
+  compress?: boolean;
 }
 
 /**
@@ -70,6 +71,6 @@ export interface RequestSuccess {
  */
 export type BeaconFunc = (
   url: string,
-  body: BodyInit,
+  body: string,
   headers?: Record<string, string>
 ) => Promise<RetryRejection | RequestSuccess | undefined>;

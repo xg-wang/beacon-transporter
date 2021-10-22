@@ -344,6 +344,40 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         expect(requests[2] - requests[1]).toBeAround(2000);
       }
     });
+
+    it('can gzip compress payload', async () => {
+      const requests = [];
+      server.post('/api', (request, response) => {
+        requests.push({
+          encoding: request.header('content-encoding'),
+          body: request.body,
+        });
+        response.sendStatus(200);
+      });
+      await page.evaluate(
+        ([url]) => {
+          const { beacon } = window.createBeacon({
+            beaconConfig: {
+              retry: {
+                limit: 0,
+              },
+            },
+            compress: true,
+          });
+          beacon(`${url}/api`, 'hi');
+        },
+        [server.url]
+      );
+      await waitForExpect(() => {
+        expect(requests.length).toEqual(1);
+      });
+
+      if (name !== 'firefox') {
+        expect(requests[0].encoding).toBe('gzip');
+      }
+      // express knows gzip
+      expect(requests[0].body).toBe('hi');
+    });
   }
 );
 

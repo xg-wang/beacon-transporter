@@ -28,9 +28,10 @@ class Beacon {
 
   constructor(
     private url: string,
-    private body: BodyInit,
+    private body: string,
     private config: BeaconConfig,
-    private db: RetryDB
+    private db: RetryDB,
+    private compress: boolean = false
   ) {
     this.timestamp = Date.now();
     this.onClearCallback = () => (this.isClearQueuePending = true);
@@ -45,7 +46,7 @@ class Beacon {
     this.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
-      (headers: Record<string, string>) => fetchFn(this.url, this.body, headers),
+      (headers: Record<string, string>) => fetchFn(this.url, this.body, headers, this.compress),
       initialRetryCountLeft,
       headers
     ).finally(() => {
@@ -154,13 +155,13 @@ export function createBeacon(init: BeaconInit = {}): {
   beacon: BeaconFunc;
   database: RetryDB;
 } {
-  const { beaconConfig, retryDBConfig } = prepareConfig(init);
-  const database = new RetryDB(retryDBConfig);
+  const { beaconConfig, retryDBConfig, compress } = prepareConfig(init);
+  const database = new RetryDB(retryDBConfig, compress);
   const beacon: BeaconFunc = (url, body, headers) => {
     if (!supportFetch) {
       return Promise.resolve(undefined);
     }
-    return new Beacon(url, body, beaconConfig, database).send(headers);
+    return new Beacon(url, body, beaconConfig, database, compress).send(headers);
   };
   return { beacon, database };
 }
@@ -182,5 +183,6 @@ function prepareConfig(init: BeaconInit): Required<BeaconInit> {
   if (retryHeader && !retryDBConfig.headerName) {
     retryDBConfig.headerName = retryHeader;
   }
-  return { beaconConfig, retryDBConfig };
+  const compress = init.compress || false;
+  return { beaconConfig, retryDBConfig, compress };
 }
