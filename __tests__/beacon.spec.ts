@@ -39,7 +39,7 @@ declare global {
 const script = {
   type: 'module',
   content: `
-${fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.js'), 'utf8')}
+${fs.readFileSync(path.join(__dirname, '..', 'dist', 'bundle.esm.js'), 'utf8')}
 self.createBeacon = createBeacon;
 self.__DEBUG_BEACON_TRANSPORTER = true;
 `,
