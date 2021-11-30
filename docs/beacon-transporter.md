@@ -4,7 +4,7 @@
 
 ## beacon-transporter package
 
-Reliable beacon API for the browser
+Transporting data to the server made easy. Support persistent retry and gzip compression.
 
 ## Classes
 

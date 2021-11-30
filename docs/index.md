@@ -8,5 +8,5 @@
 
 |  Package | Description |
 |  --- | --- |
-|  [beacon-transporter](./beacon-transporter.md) | Reliable beacon API for the browser |
+|  [beacon-transporter](./beacon-transporter.md) | Transporting data to the server made easy. Support persistent retry and gzip compression. |
 
