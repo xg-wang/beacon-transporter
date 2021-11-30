@@ -38,8 +38,12 @@ export function createRequestInit({
 
   let finalBody: string | Uint8Array = body;
   if (compress && typeof TextEncoder !== 'undefined') {
-    finalBody = gzipSync(new TextEncoder().encode(body));
-    finalHeaders.set('content-encoding', 'gzip');
+    try {
+      finalBody = gzipSync(new TextEncoder().encode(body));
+      finalHeaders.set('content-encoding', 'gzip');
+    } catch (_e) {
+      // Do not set header if gzip failed
+    }
   }
 
   return {
