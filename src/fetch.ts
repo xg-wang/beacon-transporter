@@ -62,7 +62,10 @@ function fallbackFetch(
         return;
       }
     }
-    fetch(url, createRequestInit({ body, keepalive: false, headers, compress })).then(
+    fetch(
+      url,
+      createRequestInit({ body, keepalive: false, headers, compress })
+    ).then(
       (response) => {
         if (response.ok) {
           resolve({
@@ -82,32 +85,3 @@ function fallbackFetch(
 }
 
 export const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
-
-/**
- * Fetch when browser is idle so retry does not impact performance
- */
-export function idleFetch(
-  url: string,
-  body: string,
-  headers: Record<string, string>,
-  compress: boolean
-): Promise<RequestSuccess | RetryRejection | undefined> {
-  if (typeof requestIdleCallback === 'undefined') {
-    return fetchFn(url, body, headers, compress);
-  }
-  return new Promise((resolve) => {
-    const runTask = (): void => {
-      requestIdleCallback(
-        (deadline) => {
-          if (deadline.timeRemaining() > 5 || deadline.didTimeout) {
-            resolve(fetchFn(url, body, headers, compress));
-          } else {
-            runTask();
-          }
-        },
-        { timeout: 10000 }
-      );
-    };
-    runTask();
-  });
-}

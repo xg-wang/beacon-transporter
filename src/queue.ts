@@ -8,7 +8,7 @@ import {
   shift,
 } from 'idb-queue';
 
-import { fetchFn, idleFetch } from './fetch';
+import { fetchFn } from './fetch';
 import { RetryDBConfig } from './interfaces';
 import { createHeaders, debug, logError } from './utils';
 
@@ -37,6 +37,43 @@ interface ThrottleControl {
   resetThrottle: () => void;
 }
 
+interface ScheduleTaskConfig {
+  fallbackTimeout?: number;
+  timeRemaining: number;
+  timeout: number;
+}
+
+/**
+ * Schedule task to minimize main thread impact
+ */
+function scheduleTask<T = void>(
+  runTask: () => T,
+  config: ScheduleTaskConfig = {
+    timeRemaining: 5,
+    timeout: 10000,
+  }
+): void {
+  if (typeof requestIdleCallback === 'undefined') {
+    setTimeout(runTask, config.fallbackTimeout || 10);
+  } else {
+    const runIdleScheduler = (): void => {
+      requestIdleCallback(
+        (deadline) => {
+          if (
+            deadline.timeRemaining() > config.timeRemaining ||
+            deadline.didTimeout
+          ) {
+            runTask();
+          } else {
+            runIdleScheduler();
+          }
+        },
+        { timeout: config.timeout }
+      );
+    };
+    runIdleScheduler();
+  }
+}
 /**
  * Create throttle control for executing function that is throttled,
  * and support resetting the throttling time
@@ -77,13 +114,17 @@ class QueueImpl implements Queue {
   }
 
   public push(entry: RetryEntry): void {
-    debug('Persisting to DB ' + entry.url);
-    pushIfNotClearing(entry, this.config, this.withStore)
-      .then(() => {
-        this.throttleControl.resetThrottle();
-        debug('push completed');
-      })
-      .catch(() => logError('push failed'));
+    const runPushTask = (): void => {
+      debug('Persisting to DB ' + entry.url);
+      pushIfNotClearing(entry, this.config, this.withStore)
+        .then(() => {
+          this.throttleControl.resetThrottle();
+          debug('push completed');
+        })
+        .catch(() => logError('push failed'));
+    };
+    const shouldUseIdle = this.config.useIdle?.() ?? false;
+    shouldUseIdle ? scheduleTask(runPushTask) : runPushTask();
   }
 
   public clear(): Promise<void> {
@@ -99,65 +140,75 @@ class QueueImpl implements Queue {
   }
 
   private replayEntries(): void {
-    debug('Replaying entry: shift from store');
-    shift<RetryEntry>(1, this.withStore)
-      .then((entries) => {
-        if (entries.length > 0) {
-          const { url, body, headers, timestamp, statusCode, attemptCount } = entries[0];
-          debug(
-            `header: ${String(
-              this.config.headerName
-            )}; attemptCount: ${attemptCount}`
-          );
-          const shouldUseIdle = this.config.useIdle?.();
-          const fetch = shouldUseIdle ? idleFetch : fetchFn;
-          return fetch(
-            url,
-            body,
-            createHeaders(headers, this.config.headerName, attemptCount, statusCode),
-            this.compress
-          ).then((maybeError) => {
-            if (!maybeError || maybeError.type === 'success') {
-              this.replayEntries();
-            } else {
-              const debugInfo = JSON.stringify(
-                {
-                  url,
-                  timestamp,
-                  statusCode,
-                },
-                null,
-                2
-              );
-              if (attemptCount + 1 > this.config.attemptLimit) {
-                debug(
-                  'Exceeded attempt count, dropping the entry: ' + debugInfo
+    const runReplayEntriesTask = (): void => {
+      debug('Replaying entry: shift from store');
+      shift<RetryEntry>(1, this.withStore)
+        .then((entries) => {
+          if (entries.length > 0) {
+            const { url, body, headers, timestamp, statusCode, attemptCount } =
+              entries[0];
+            debug(
+              `header: ${String(
+                this.config.headerName
+              )}; attemptCount: ${attemptCount}`
+            );
+            const fetch = fetchFn;
+            return fetch(
+              url,
+              body,
+              createHeaders(
+                headers,
+                this.config.headerName,
+                attemptCount,
+                statusCode
+              ),
+              this.compress
+            ).then((maybeError) => {
+              if (!maybeError || maybeError.type === 'success') {
+                this.replayEntries();
+              } else {
+                const debugInfo = JSON.stringify(
+                  {
+                    url,
+                    timestamp,
+                    statusCode,
+                  },
+                  null,
+                  2
                 );
-                return;
+                if (attemptCount + 1 > this.config.attemptLimit) {
+                  debug(
+                    'Exceeded attempt count, dropping the entry: ' + debugInfo
+                  );
+                  return;
+                }
+                debug(
+                  'Replaying the entry failed, pushing back to IDB: ' +
+                    debugInfo
+                );
+                return pushIfNotClearing(
+                  {
+                    url,
+                    body,
+                    timestamp,
+                    statusCode,
+                    attemptCount: attemptCount + 1,
+                  },
+                  this.config,
+                  this.withStore
+                );
               }
-              debug(
-                'Replaying the entry failed, pushing back to IDB: ' + debugInfo
-              );
-              return pushIfNotClearing(
-                {
-                  url,
-                  body,
-                  timestamp,
-                  statusCode,
-                  attemptCount: attemptCount + 1,
-                },
-                this.config,
-                this.withStore
-              );
-            }
-          });
-        }
-      })
-      .catch((reason: DOMException) => {
-        if (reason && reason.message) {
-          logError(`Replay entry failed: ${reason.message}`);
-        }
-      });
+            });
+          }
+        })
+        .catch((reason: DOMException) => {
+          if (reason && reason.message) {
+            logError(`Replay entry failed: ${reason.message}`);
+          }
+        });
+    };
+    const shouldUseIdle = this.config.useIdle?.() ?? false;
+    shouldUseIdle ? scheduleTask(runReplayEntriesTask) : runReplayEntriesTask();
   }
 }
 
@@ -190,7 +241,9 @@ export class RetryDB {
   private beaconListeners = new Set<() => void>();
 
   constructor(config: RetryDBConfig, compress = false) {
-    this.queue = RetryDB.hasSupport ? new QueueImpl(config, compress) : new NoopQueue();
+    this.queue = RetryDB.hasSupport
+      ? new QueueImpl(config, compress)
+      : new NoopQueue();
   }
 
   pushToQueue(entry: RetryEntry): void {
