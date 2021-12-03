@@ -7,8 +7,15 @@
 <b>Signature:</b>
 
 ```typescript
-notifyQueue(): void;
+notifyQueue(config: QueueNotificationConfig): void;
 ```
+
+## Parameters
+
+|  Parameter | Type | Description |
+|  --- | --- | --- |
+|  config | QueueNotificationConfig |  |
+
 <b>Returns:</b>
 
 void

@@ -24,16 +24,20 @@ export interface RetryEntry {
   attemptCount: number;
 }
 
+interface QueueNotificationConfig {
+  allowedPersistRetryStatusCodes: number[];
+}
+
 interface Queue {
-  onNotify(): void;
+  onNotify(config: QueueNotificationConfig): void;
   push(entry: RetryEntry): void;
   clear(): Promise<void>;
   peek(count: number): Promise<RetryEntry[]>;
   peekBack(count: number): Promise<RetryEntry[]>;
 }
 
-interface ThrottleControl {
-  throttledFn: () => void;
+interface ThrottleControl<Param> {
+  throttledFn: (param: Param) => void;
   resetThrottle: () => void;
 }
 
@@ -78,13 +82,16 @@ function scheduleTask<T = void>(
  * Create throttle control for executing function that is throttled,
  * and support resetting the throttling time
  */
-function throttle(fn: () => void, timeFrame: number): ThrottleControl {
+function throttle<Param>(
+  fn: (param: Param) => void,
+  timeFrame: number
+): ThrottleControl<Param> {
   let lastTime = 0;
-  const throttledFn = (): void => {
+  const throttledFn = (param: Param): void => {
     const now = Date.now();
     if (now - lastTime > timeFrame) {
       debug('[throttle] Run fn() at ' + String(now));
-      fn();
+      fn(param);
       lastTime = now;
     }
   };
@@ -98,7 +105,7 @@ function throttle(fn: () => void, timeFrame: number): ThrottleControl {
 }
 
 class QueueImpl implements Queue {
-  private throttleControl: ThrottleControl;
+  private throttleControl: ThrottleControl<QueueNotificationConfig>;
   private withStore: WithStore;
 
   constructor(private config: RetryDBConfig, private compress = false) {
@@ -109,8 +116,8 @@ class QueueImpl implements Queue {
     );
   }
 
-  public onNotify(): void {
-    this.throttleControl.throttledFn();
+  public onNotify(config: QueueNotificationConfig): void {
+    this.throttleControl.throttledFn(config);
   }
 
   public push(entry: RetryEntry): void {
@@ -139,7 +146,7 @@ class QueueImpl implements Queue {
     return peekBack<RetryEntry>(count, this.withStore);
   }
 
-  private replayEntries(): void {
+  private replayEntries(config: QueueNotificationConfig): void {
     const runReplayEntriesTask = (): void => {
       debug('Replaying entry: shift from store');
       shift<RetryEntry>(1, this.withStore)
@@ -165,7 +172,7 @@ class QueueImpl implements Queue {
               this.compress
             ).then((maybeError) => {
               if (!maybeError || maybeError.type === 'success') {
-                this.replayEntries();
+                this.replayEntries(config);
               } else {
                 const debugInfo = JSON.stringify(
                   {
@@ -182,21 +189,28 @@ class QueueImpl implements Queue {
                   );
                   return;
                 }
-                debug(
-                  'Replaying the entry failed, pushing back to IDB: ' +
-                    debugInfo
-                );
-                return pushIfNotClearing(
-                  {
-                    url,
-                    body,
-                    timestamp,
-                    statusCode,
-                    attemptCount: attemptCount + 1,
-                  },
-                  this.config,
-                  this.withStore
-                );
+                if (
+                  maybeError.type === 'network' ||
+                  config.allowedPersistRetryStatusCodes.includes(
+                    maybeError.statusCode
+                  )
+                ) {
+                  debug(
+                    'Replaying the entry failed, pushing back to IDB: ' +
+                      debugInfo
+                  );
+                  return pushIfNotClearing(
+                    {
+                      url,
+                      body,
+                      timestamp,
+                      statusCode,
+                      attemptCount: attemptCount + 1,
+                    },
+                    this.config,
+                    this.withStore
+                  );
+                }
               }
             });
           }
@@ -213,7 +227,7 @@ class QueueImpl implements Queue {
 }
 
 class NoopQueue {
-  onNotify(): void {
+  onNotify(_config: QueueNotificationConfig): void {
     // noop
   }
   push(): void {
@@ -250,8 +264,8 @@ export class RetryDB {
     this.queue.push(entry);
   }
 
-  notifyQueue(): void {
-    this.queue.onNotify();
+  notifyQueue(config: QueueNotificationConfig): void {
+    this.queue.onNotify(config);
   }
 
   clearQueue(): Promise<void> {

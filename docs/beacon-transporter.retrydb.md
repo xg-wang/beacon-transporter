@@ -28,7 +28,7 @@ export declare class RetryDB
 |  Method | Modifiers | Description |
 |  --- | --- | --- |
 |  [clearQueue()](./beacon-transporter.retrydb.clearqueue.md) |  |  |
-|  [notifyQueue()](./beacon-transporter.retrydb.notifyqueue.md) |  |  |
+|  [notifyQueue(config)](./beacon-transporter.retrydb.notifyqueue.md) |  |  |
 |  [onClear(cb)](./beacon-transporter.retrydb.onclear.md) |  |  |
 |  [peekBackQueue(count)](./beacon-transporter.retrydb.peekbackqueue.md) |  |  |
 |  [peekQueue(count)](./beacon-transporter.retrydb.peekqueue.md) |  |  |

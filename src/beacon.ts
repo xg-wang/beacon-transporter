@@ -22,6 +22,8 @@ const defaultPersistRetryStatusCodes = [429, 503];
 
 class Beacon {
   private timestamp: number;
+  private persistRetryStatusCodes: number[];
+  private inMemoryRetryStatusCodes: number[];
   private isClearQueuePending = false;
   private onClearCallback: () => void;
   private calculateRetryDelay: (retryCountLeft: number) => number;
@@ -34,6 +36,10 @@ class Beacon {
     private compress: boolean = false
   ) {
     this.timestamp = Date.now();
+    this.persistRetryStatusCodes =
+      config.retry.persistRetryStatusCodes || defaultPersistRetryStatusCodes;
+    this.inMemoryRetryStatusCodes =
+      config.retry.inMemoryRetryStatusCodes || defaultInMemoryRetryStatusCodes;
     this.onClearCallback = () => (this.isClearQueuePending = true);
     this.calculateRetryDelay =
       config.retry.calculateRetryDelay ??
@@ -46,7 +52,8 @@ class Beacon {
     this.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
-      (headers: Record<string, string>) => fetchFn(this.url, this.body, headers, this.compress),
+      (headers: Record<string, string>) =>
+        fetchFn(this.url, this.body, headers, this.compress),
       initialRetryCountLeft,
       headers
     ).finally(() => {
@@ -75,17 +82,24 @@ class Beacon {
     ) => Promise<RetryRejection | RequestSuccess | undefined>,
     retryCountLeft: number,
     headers: Record<string, string>,
-    errorCode?: number,
+    errorCode?: number
   ): Promise<RetryRejection | RequestSuccess | undefined> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
-      createHeaders(headers, this.config.retry.headerName, attemptCount, errorCode)
+      createHeaders(
+        headers,
+        this.config.retry.headerName,
+        attemptCount,
+        errorCode
+      )
     ).then((maybeError) => {
       if (typeof maybeError === 'undefined' || maybeError.type === 'success') {
         if (!this.isClearQueuePending && this.config.retry.persist) {
-          this.db.notifyQueue();
+          this.db.notifyQueue({
+            allowedPersistRetryStatusCodes: this.persistRetryStatusCodes,
+          });
         }
-      } else if (typeof maybeError !== 'undefined') {
+      } else {
         debug('retry rejected ' + JSON.stringify(maybeError));
         if (this.shouldPersist(retryCountLeft, maybeError)) {
           this.db.pushToQueue({
@@ -111,10 +125,7 @@ class Beacon {
   private isRetryableError(error: RetryRejection): boolean {
     if (
       error.type === 'network' ||
-      (
-        this.config.retry.inMemoryRetryStatusCodes ??
-        defaultInMemoryRetryStatusCodes
-      ).includes(error.statusCode)
+      this.inMemoryRetryStatusCodes.includes(error.statusCode)
     ) {
       return true;
     }
@@ -137,10 +148,7 @@ class Beacon {
     }
     const fromStatusCode =
       error.type === 'response' &&
-      (
-        this.config.retry.persistRetryStatusCodes ??
-        defaultPersistRetryStatusCodes
-      ).includes(error.statusCode);
+      this.persistRetryStatusCodes.includes(error.statusCode);
     if (fromStatusCode) {
       return true;
     }
@@ -161,7 +169,9 @@ export function createBeacon(init: BeaconInit = {}): {
     if (!supportFetch) {
       return Promise.resolve(undefined);
     }
-    return new Beacon(url, body, beaconConfig, database, compress).send(headers);
+    return new Beacon(url, body, beaconConfig, database, compress).send(
+      headers
+    );
   };
   return { beacon, database };
 }
