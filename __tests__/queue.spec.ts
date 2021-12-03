@@ -141,7 +141,9 @@ describe.each([
 
     let numberOfBeacons = 0;
     await page.route('**/api/*', (route) => {
-      // fetch will fallback to keepalive false and try 2nd time
+      // if >64kb fetch will fallback to keepalive false and try 2nd time before hitting network
+      // if <64kb fetch will also fallback to keepalive false and try 2nd time, both hit network
+      // and we need network to fail both attempts
       if (++numberOfBeacons > (contentLength === '>64kb' ? 3 : 2 * 3)) {
         log('Continue route request');
         return route.continue();
@@ -300,7 +302,7 @@ describe.each([
             retry: {
               limit: 1,
               persist: true,
-              inMemoryRetryStatusCodes: [502],
+              inMemoryRetryStatusCodes: [888],
               headerName: 'x-retry-context',
             },
           },
@@ -312,7 +314,7 @@ describe.each([
             throttleWait: 200,
           },
         });
-        beacon(`${url}/api/502`, bodyPayload);
+        beacon(`${url}/api/888`, bodyPayload);
         setTimeout(() => {
           beacon(`${url}/api/200`, bodyPayload);
         }, 2500);
@@ -324,9 +326,9 @@ describe.each([
     });
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
-    expect(results[0].status).toBe(502);
+    expect(results[0].status).toBe(888);
     expect(results[0].header).toBeUndefined;
-    expect(results[1].status).toBe(502);
+    expect(results[1].status).toBe(888);
     expect(results[1].header).toBeUndefined;
     expect(results[2].status).toBe(200);
   });
@@ -347,7 +349,7 @@ describe.each([
             retry: {
               limit: 1,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -359,7 +361,7 @@ describe.each([
             throttleWait: 200,
           },
         });
-        beacon(`${url}/api/429`, bodyPayload);
+        beacon(`${url}/api/999`, bodyPayload);
         setTimeout(async () => {
           await database.clearQueue();
           beacon(`${url}/api/200`, bodyPayload);
@@ -372,7 +374,7 @@ describe.each([
     });
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(2);
-    expect(results[0].status).toBe(429);
+    expect(results[0].status).toBe(999);
     expect(results[0].header).toBeUndefined;
     expect(results[1].status).toBe(200);
   });
@@ -393,7 +395,7 @@ describe.each([
             retry: {
               limit: 0,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -405,7 +407,7 @@ describe.each([
             throttleWait: 200,
           },
         });
-        beacon(`${url}/api/429`, bodyPayload);
+        beacon(`${url}/api/999`, bodyPayload);
         setTimeout(() => {
           beacon(`${url}/api/200`, bodyPayload);
         }, 1000);
@@ -424,8 +426,72 @@ describe.each([
     await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(6);
     expect(results.map((r) => r.status)).toEqual([
-      429, 200, 429, 200, 429, 200,
+      999, 200, 999, 200, 999, 200,
     ]);
+  });
+
+  it('will not retry again if retrying from IDB failed from response codes not in allowed status codes', async () => {
+    const results: { status: number; header: string }[] = [];
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = { status, header: headers['x-retry-context'] };
+      results.push(payload);
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    let numberOfBeacons = 0;
+    await page.route('**/api/*', (route) => {
+      // if >64kb fetch will fallback to keepalive false and try 2nd time before hitting network
+      // if <64kb fetch will also fallback to keepalive false and try 2nd time, both hit network
+      // and we need network to fail both attempts
+      if (++numberOfBeacons > (contentLength === '>64kb' ? 1 : 2)) {
+        log('Continue route request');
+        return route.continue();
+      } else {
+        log('Abort route request');
+        return route.abort();
+      }
+    });
+    await page.evaluate(
+      ([url, bodyPayload]) => {
+        const { beacon } = window.createBeacon({
+          beaconConfig: {
+            retry: {
+              limit: 0,
+              persist: true,
+              inMemoryRetryStatusCodes: [888],
+              persistRetryStatusCodes: [999],
+              headerName: 'x-retry-context',
+            },
+          },
+          retryDBConfig: {
+            dbName: 'test-database',
+            attemptLimit: 2,
+            maxNumber: 10,
+            batchEvictionNumber: 3,
+            throttleWait: 200,
+          },
+        });
+        // This will first fail due to network issue, then response with 888 (inMemoryRetryStatusCodes)
+        // but RetryDB will drop when we see 888 which is not in persistRetryStatusCodes
+        beacon(`${url}/api/888`, bodyPayload);
+        // This will trigger the 888 request
+        setTimeout(() => {
+          beacon(`${url}/api/200`, bodyPayload);
+        }, 2000);
+        // This will try to trigger anything left in DB again to verify nothing's there
+        setTimeout(() => {
+          beacon(`${url}/api/200`, bodyPayload);
+        }, 2000 + 2000);
+      },
+      [server.url, createBody(contentLength)]
+    );
+    await waitForExpect(() => {
+      expect(results.length).toBe(3);
+    }, 5000);
+    await page.waitForTimeout(1000); // give extra 1s to confirm no retries fired
+    expect(numberOfBeacons).toBe(contentLength === '>64kb' ? 1 + 3 : 2 + 3);
+    expect(results.map((r) => r.status)).toEqual([200, 888, 200]);
   });
 
   it('persistent data can be retried on another page', async () => {
@@ -444,7 +510,7 @@ describe.each([
             retry: {
               limit: 0,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -456,7 +522,7 @@ describe.each([
             throttleWait: 200,
           },
         });
-        beacon(`${url}/api/429`, bodyPayload);
+        beacon(`${url}/api/999`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
@@ -482,7 +548,7 @@ describe.each([
             retry: {
               limit: 0,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -504,7 +570,7 @@ describe.each([
     });
     await page2.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
-    expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+    expect(results.map((r) => r.status)).toEqual([999, 200, 999]);
     await closePage(page2);
   });
 
@@ -518,14 +584,14 @@ describe.each([
       ([url, bodyPayload]) => {
         const { beacon, database } = window.createBeacon({
           beaconConfig: {
-            retry: { limit: 0, persist: true },
+            retry: { limit: 0, persistRetryStatusCodes: [999], persist: true },
           },
         });
         // @ts-ignore
         window.beacon = beacon;
         // @ts-ignore
         window.database = database;
-        beacon(`${url}/api/429`, bodyPayload);
+        beacon(`${url}/api/999`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
@@ -537,9 +603,9 @@ describe.each([
       ([url, bodyPayload]) => {
         return Promise.all([
           // @ts-ignore
-          beacon(`${url}/api/429`, bodyPayload),
+          beacon(`${url}/api/999`, bodyPayload),
           // @ts-ignore
-          beacon(`${url}/api/429`, bodyPayload),
+          beacon(`${url}/api/999`, bodyPayload),
           // @ts-ignore
           database.clearQueue(),
         ]);
@@ -574,7 +640,7 @@ describe.each([
             retry: {
               limit: 0,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -587,7 +653,7 @@ describe.each([
           },
           compress: false, // explicitly set to false, which is the default
         });
-        beacon(`${url}/api/429`, bodyPayload);
+        beacon(`${url}/api/999`, bodyPayload);
       },
       [server.url, createBody(contentLength)]
     );
@@ -613,7 +679,7 @@ describe.each([
             retry: {
               limit: 0,
               persist: true,
-              inMemoryRetryStatusCodes: [429],
+              persistRetryStatusCodes: [999],
               headerName: 'x-retry-context',
             },
           },
@@ -636,7 +702,7 @@ describe.each([
     });
     await page2.waitForTimeout(1000); // give extra 1s to confirm no retries fired
     expect(results.length).toBe(3);
-    expect(results.map((r) => r.status)).toEqual([429, 200, 429]);
+    expect(results.map((r) => r.status)).toEqual([999, 200, 999]);
     expect(results.map((r) => r.encoding)).toEqual([undefined, 'gzip', 'gzip']);
     await closePage(page2);
   });

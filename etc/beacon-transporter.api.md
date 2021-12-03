@@ -71,8 +71,10 @@ export class RetryDB {
     clearQueue(): Promise<void>;
     // (undocumented)
     static hasSupport: boolean;
+    // Warning: (ae-forgotten-export) The symbol "QueueNotificationConfig" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
-    notifyQueue(): void;
+    notifyQueue(config: QueueNotificationConfig): void;
     // (undocumented)
     onClear(cb: () => void): void;
     // (undocumented)
