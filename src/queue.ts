@@ -90,7 +90,7 @@ function throttle<Param>(
   const throttledFn = (param: Param): void => {
     const now = Date.now();
     if (now - lastTime > timeFrame) {
-      debug('[throttle] Run fn() at ' + String(now));
+      debug(() => '[throttle] Run fn() at ' + String(now));
       fn(param);
       lastTime = now;
     }
@@ -122,13 +122,13 @@ class QueueImpl implements Queue {
 
   public push(entry: RetryEntry): void {
     const runPushTask = (): void => {
-      debug('Persisting to DB ' + entry.url);
+      debug(() => 'Persisting to DB ' + entry.url);
       pushIfNotClearing(entry, this.config, this.withStore)
         .then(() => {
           this.throttleControl.resetThrottle();
-          debug('push completed');
+          debug(() => 'push completed');
         })
-        .catch(() => logError('push failed'));
+        .catch(() => logError(() => 'push failed'));
     };
     const shouldUseIdle = this.config.useIdle?.() ?? false;
     shouldUseIdle ? scheduleTask(runPushTask) : runPushTask();
@@ -148,13 +148,13 @@ class QueueImpl implements Queue {
 
   private replayEntries(config: QueueNotificationConfig): void {
     const runReplayEntriesTask = (): void => {
-      debug('Replaying entry: shift from store');
+      debug(() => 'Replaying entry: shift from store');
       shift<RetryEntry>(1, this.withStore)
         .then((entries) => {
           if (entries.length > 0) {
             const { url, body, headers, timestamp, statusCode, attemptCount } =
               entries[0];
-            debug(
+            debug(() =>
               `header: ${String(
                 this.config.headerName
               )}; attemptCount: ${attemptCount}`
@@ -174,18 +174,17 @@ class QueueImpl implements Queue {
               if (!maybeError || maybeError.type === 'success') {
                 this.replayEntries(config);
               } else {
-                const debugInfo = JSON.stringify(
-                  {
-                    url,
-                    timestamp,
-                    statusCode,
-                  },
-                  null,
-                  2
-                );
                 if (attemptCount + 1 > this.config.attemptLimit) {
-                  debug(
-                    'Exceeded attempt count, dropping the entry: ' + debugInfo
+                  debug(() =>
+                    'Exceeded attempt count, dropping the entry: ' + JSON.stringify(
+                      {
+                        url,
+                        timestamp,
+                        statusCode,
+                      },
+                      null,
+                      2
+                    )
                   );
                   return;
                 }
@@ -195,9 +194,17 @@ class QueueImpl implements Queue {
                     maybeError.statusCode
                   )
                 ) {
-                  debug(
+                  debug(() =>
                     'Replaying the entry failed, pushing back to IDB: ' +
-                      debugInfo
+                    JSON.stringify(
+                      {
+                        url,
+                        timestamp,
+                        statusCode,
+                      },
+                      null,
+                      2
+                    )
                   );
                   return pushIfNotClearing(
                     {
@@ -217,7 +224,7 @@ class QueueImpl implements Queue {
         })
         .catch((reason: DOMException) => {
           if (reason && reason.message) {
-            logError(`Replay entry failed: ${reason.message}`);
+            logError(() => `Replay entry failed: ${reason.message}`);
           }
         });
     };
