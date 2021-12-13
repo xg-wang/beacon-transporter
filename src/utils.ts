@@ -56,14 +56,14 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-export function debug(...data: string[]): void {
+export function debug(data: () => string): void {
   if (typeof window !== 'undefined' && window.__DEBUG_BEACON_TRANSPORTER) {
-    console.debug('[beacon-transporter] ', ...data);
+    console.debug('[beacon-transporter] ', data());
   }
 }
 
-export function logError(...data: string[]): void {
+export function logError(data: () => string): void {
   if (typeof window !== 'undefined' && window.__DEBUG_BEACON_TRANSPORTER) {
-    console.error('[beacon-transporter] ', ...data);
+    console.error('[beacon-transporter] ', data());
   }
 }

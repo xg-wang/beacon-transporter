@@ -1,5 +1,6 @@
 {
   "files.associations": {
     "api-extractor.json": "jsonc"
-  }
+  },
+  "editor.formatOnSave": true
 }

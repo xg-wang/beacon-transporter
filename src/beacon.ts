@@ -57,7 +57,7 @@ class Beacon {
       initialRetryCountLeft,
       headers
     ).finally(() => {
-      debug('beacon finished');
+      debug(() => 'beacon finished');
       this.db.removeOnClear(this.onClearCallback);
     });
   }
@@ -100,7 +100,7 @@ class Beacon {
           });
         }
       } else {
-        debug('retry rejected ' + JSON.stringify(maybeError));
+        debug(() => 'retry rejected ' + JSON.stringify(maybeError));
         if (this.shouldPersist(retryCountLeft, maybeError)) {
           this.db.pushToQueue({
             url: this.url,
@@ -112,7 +112,7 @@ class Beacon {
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(maybeError)) {
           const waitMs = this.calculateRetryDelay(retryCountLeft);
-          debug(`in memory retry in ${waitMs}ms`);
+          debug(() => `in memory retry in ${waitMs}ms`);
           return sleep(waitMs).then(() =>
             this.retry(fn, retryCountLeft - 1, headers, maybeError.statusCode)
           );
