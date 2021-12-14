@@ -107,9 +107,28 @@ function throttle<Param>(
 class QueueImpl implements Queue {
   private throttleControl: ThrottleControl<QueueNotificationConfig>;
   private withStore: WithStore;
+  private disablePersistence = false;
 
   constructor(private config: RetryDBConfig, private compress = false) {
-    this.withStore = createStore(config.dbName, 'beacons', 'timestamp');
+    const measureCreate = config.measureIDB?.create;
+    if (measureCreate) {
+      performance.mark(measureCreate.createStartMark);
+    }
+    this.withStore = createStore(config.dbName, 'beacons', 'timestamp', {
+      onSuccess: () => {
+        if (measureCreate) {
+          performance.mark(measureCreate.createSuccessMark);
+          performance.measure(measureCreate.createSuccessMeasure);
+        }
+      },
+      onError: () => {
+        if (measureCreate) {
+          performance.measure(measureCreate.createFailMark);
+          performance.measure(measureCreate.createFailMeasure);
+        }
+        this.disablePersistence = true;
+      }
+    });
     this.throttleControl = throttle(
       this.replayEntries.bind(this),
       config.throttleWait
@@ -117,10 +136,16 @@ class QueueImpl implements Queue {
   }
 
   public onNotify(config: QueueNotificationConfig): void {
+    if (this.disablePersistence) {
+      return;
+    }
     this.throttleControl.throttledFn(config);
   }
 
   public push(entry: RetryEntry): void {
+    if (this.disablePersistence) {
+      return;
+    }
     const runPushTask = (): void => {
       debug(() => 'Persisting to DB ' + entry.url);
       pushIfNotClearing(entry, this.config, this.withStore)
@@ -128,25 +153,51 @@ class QueueImpl implements Queue {
           this.throttleControl.resetThrottle();
           debug(() => 'push completed');
         })
-        .catch(() => logError(() => 'push failed'));
+        .catch(() => {
+          this.disablePersistence = true;
+          logError(() => 'push failed')
+        });
     };
     const shouldUseIdle = this.config.useIdle?.() ?? false;
     shouldUseIdle ? scheduleTask(runPushTask) : runPushTask();
   }
 
   public clear(): Promise<void> {
-    return clear(this.withStore);
+    if (this.disablePersistence) {
+      return Promise.resolve();
+    }
+    return clear(this.withStore).catch(() => {
+      this.disablePersistence = true;
+      logError(() => 'clear failed')
+    });
   }
 
   public peek(count = 1): Promise<RetryEntry[]> {
-    return peek<RetryEntry>(count, this.withStore);
+    if (this.disablePersistence) {
+      return Promise.resolve([]);
+    }
+    return peek<RetryEntry>(count, this.withStore).catch(() => {
+      this.disablePersistence = true;
+      logError(() => 'peek failed')
+      return [];
+    });
   }
 
   public peekBack(count = 1): Promise<RetryEntry[]> {
-    return peekBack<RetryEntry>(count, this.withStore);
+    if (this.disablePersistence) {
+      return Promise.resolve([]);
+    }
+    return peekBack<RetryEntry>(count, this.withStore).catch(() => {
+      this.disablePersistence = true;
+      logError(() => 'peekBack failed')
+      return [];
+    });
   }
 
   private replayEntries(config: QueueNotificationConfig): void {
+    if (this.disablePersistence) {
+      return;
+    }
     const runReplayEntriesTask = (): void => {
       debug(() => 'Replaying entry: shift from store');
       shift<RetryEntry>(1, this.withStore)
@@ -223,6 +274,7 @@ class QueueImpl implements Queue {
           }
         })
         .catch((reason: DOMException) => {
+          this.disablePersistence = true;
           if (reason && reason.message) {
             logError(() => `Replay entry failed: ${reason.message}`);
           }

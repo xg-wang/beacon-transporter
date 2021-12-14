@@ -2355,7 +2355,7 @@ iconv-lite@0.4.24:
   dependencies:
     safer-buffer ">= 2.1.2 < 3"
 
-idb-queue@^0.1.5:
+idb-queue@^0.1.6:
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/idb-queue/-/idb-queue-0.1.6.tgz#0f5f8c8e32344f6306e6bcec5eaf5a6593e298b4"
   integrity sha512-FY4kGZpXMJDPmSc2w0rUC0qGBJBQbporN7zxKEXiU7RdD+TbCBPPMvUUw3JQmlEnWQg/huVaURzW9P4uQ4qlqw==
