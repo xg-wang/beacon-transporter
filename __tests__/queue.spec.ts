@@ -706,4 +706,49 @@ describe.each([
     expect(results.map((r) => r.encoding)).toEqual([undefined, 'gzip', 'gzip']);
     await closePage(page2);
   });
+
+  it('Adds performance measurement for IDB open', async () => {
+    const results = [];
+    server.post('/api/:status', ({ params, headers }, res) => {
+      const status = +params.status;
+      const payload = { status, header: headers['x-retry-context'] };
+      results.push(payload);
+      res.status(status).send(`Status: ${status}`);
+    });
+
+    await page.evaluate(() => {
+      window.createBeacon({
+        beaconConfig: {
+          retry: {
+            limit: 1,
+            persist: true,
+            persistRetryStatusCodes: [999],
+            headerName: 'x-retry-context',
+          },
+        },
+        retryDBConfig: {
+          dbName: 'test-database',
+          attemptLimit: 1,
+          maxNumber: 10,
+          batchEvictionNumber: 3,
+          throttleWait: 200,
+          measureIDB: {
+            create: {
+              createStartMark: 'create-start',
+              createSuccessMark: 'create-success',
+              createSuccessMeasure: 'create-success-measure',
+              createFailMark: 'create-failed',
+              createFailMeasure: 'create-failed-measure',
+            },
+          },
+        },
+      });
+    });
+    await page.waitForTimeout(1000);
+    const perfEntries = await page.evaluate(() => {
+      return performance.getEntriesByName('create-success-measure', 'measure').map(entry => entry.toJSON());
+    });
+    expect(perfEntries.length).toEqual(1);
+    expect(perfEntries[0].name).toEqual('create-success-measure');
+  });
 });
