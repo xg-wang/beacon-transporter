@@ -18,6 +18,15 @@ export interface RetryDBConfig {
   batchEvictionNumber: number;
   throttleWait: number;
   useIdle?: () => boolean;
+  measureIDB?: {
+    create?: {
+      createStartMark: string,
+      createSuccessMark: string,
+      createSuccessMeasure: string,
+      createFailMark: string,
+      createFailMeasure: string,
+    }
+  }
 }
 
 /**

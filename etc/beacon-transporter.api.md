@@ -102,6 +102,16 @@ export interface RetryDBConfig {
     // (undocumented)
     maxNumber: number;
     // (undocumented)
+    measureIDB?: {
+        create?: {
+            createStartMark: string;
+            createSuccessMark: string;
+            createSuccessMeasure: string;
+            createFailMark: string;
+            createFailMeasure: string;
+        };
+    };
+    // (undocumented)
     throttleWait: number;
     // (undocumented)
     useIdle?: () => boolean;
