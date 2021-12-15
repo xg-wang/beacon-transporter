@@ -21,9 +21,7 @@ export interface RetryDBConfig {
   measureIDB?: {
     create?: {
       createStartMark: string,
-      createSuccessMark: string,
       createSuccessMeasure: string,
-      createFailMark: string,
       createFailMeasure: string,
     }
   }

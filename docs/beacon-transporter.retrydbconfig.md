@@ -20,7 +20,7 @@ export interface RetryDBConfig
 |  [dbName](./beacon-transporter.retrydbconfig.dbname.md) | string |  |
 |  [headerName?](./beacon-transporter.retrydbconfig.headername.md) | string | <i>(Optional)</i> |
 |  [maxNumber](./beacon-transporter.retrydbconfig.maxnumber.md) | number |  |
-|  [measureIDB?](./beacon-transporter.retrydbconfig.measureidb.md) | { create?: { createStartMark: string; createSuccessMark: string; createSuccessMeasure: string; createFailMark: string; createFailMeasure: string; }; } | <i>(Optional)</i> |
+|  [measureIDB?](./beacon-transporter.retrydbconfig.measureidb.md) | { create?: { createStartMark: string; createSuccessMeasure: string; createFailMeasure: string; }; } | <i>(Optional)</i> |
 |  [throttleWait](./beacon-transporter.retrydbconfig.throttlewait.md) | number |  |
 |  [useIdle?](./beacon-transporter.retrydbconfig.useidle.md) | () =&gt; boolean | <i>(Optional)</i> |
 

@@ -117,14 +117,12 @@ class QueueImpl implements Queue {
     this.withStore = createStore(config.dbName, 'beacons', 'timestamp', {
       onSuccess: () => {
         if (measureCreate) {
-          performance.mark(measureCreate.createSuccessMark);
-          performance.measure(measureCreate.createSuccessMeasure);
+          performance.measure(measureCreate.createSuccessMeasure, measureCreate.createStartMark);
         }
       },
       onError: () => {
         if (measureCreate) {
-          performance.measure(measureCreate.createFailMark);
-          performance.measure(measureCreate.createFailMeasure);
+          performance.measure(measureCreate.createFailMeasure, measureCreate.createStartMark);
         }
         this.disablePersistence = true;
       }

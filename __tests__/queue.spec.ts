@@ -735,10 +735,8 @@ describe.each([
           measureIDB: {
             create: {
               createStartMark: 'create-start',
-              createSuccessMark: 'create-success',
               createSuccessMeasure: 'create-success-measure',
-              createFailMark: 'create-failed',
-              createFailMeasure: 'create-failed-measure',
+              createFailMeasure: 'create-fail-measure',
             },
           },
         },
@@ -746,9 +744,15 @@ describe.each([
     });
     await page.waitForTimeout(1000);
     const perfEntries = await page.evaluate(() => {
-      return performance.getEntriesByName('create-success-measure', 'measure').map(entry => entry.toJSON());
+      return [
+        performance
+          .getEntriesByName('create-success-measure', 'measure')[0]
+          .toJSON(),
+        performance.getEntriesByName('create-start', 'mark')[0].toJSON(),
+      ];
     });
-    expect(perfEntries.length).toEqual(1);
+    expect(perfEntries.length).toEqual(2);
     expect(perfEntries[0].name).toEqual('create-success-measure');
+    expect(perfEntries[0].startTime).toEqual(perfEntries[1].startTime);
   });
 });
