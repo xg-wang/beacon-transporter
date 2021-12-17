@@ -9,26 +9,22 @@ import {
 } from 'idb-queue';
 
 import { fetchFn } from './fetch';
-import { RetryDBConfig } from './interfaces';
-import { createHeaders, debug, logError } from './utils';
+import {
+  IRetryDB,
+  QueueNotificationConfig,
+  RetryDBConfig,
+  RetryEntry,
+} from './interfaces';
+import {
+  createHeaders,
+  debug,
+  logError,
+  scheduleTask,
+  throttle,
+  ThrottleControl,
+} from './utils';
 
-/**
- * @internal
- */
-export interface RetryEntry {
-  url: string;
-  body: string;
-  headers?: Record<string, string>;
-  statusCode?: number;
-  timestamp: number;
-  attemptCount: number;
-}
-
-interface QueueNotificationConfig {
-  allowedPersistRetryStatusCodes: number[];
-}
-
-interface Queue {
+interface IQueue {
   onNotify(config: QueueNotificationConfig): void;
   push(entry: RetryEntry): void;
   clear(): Promise<void>;
@@ -36,75 +32,7 @@ interface Queue {
   peekBack(count: number): Promise<RetryEntry[]>;
 }
 
-interface ThrottleControl<Param> {
-  throttledFn: (param: Param) => void;
-  resetThrottle: () => void;
-}
-
-interface ScheduleTaskConfig {
-  fallbackTimeout?: number;
-  timeRemaining: number;
-  timeout: number;
-}
-
-/**
- * Schedule task to minimize main thread impact
- */
-function scheduleTask<T = void>(
-  runTask: () => T,
-  config: ScheduleTaskConfig = {
-    timeRemaining: 5,
-    timeout: 10000,
-  }
-): void {
-  if (typeof requestIdleCallback === 'undefined') {
-    setTimeout(runTask, config.fallbackTimeout || 10);
-  } else {
-    const runIdleScheduler = (): void => {
-      requestIdleCallback(
-        (deadline) => {
-          if (
-            deadline.timeRemaining() > config.timeRemaining ||
-            deadline.didTimeout
-          ) {
-            runTask();
-          } else {
-            runIdleScheduler();
-          }
-        },
-        { timeout: config.timeout }
-      );
-    };
-    runIdleScheduler();
-  }
-}
-/**
- * Create throttle control for executing function that is throttled,
- * and support resetting the throttling time
- */
-function throttle<Param>(
-  fn: (param: Param) => void,
-  timeFrame: number
-): ThrottleControl<Param> {
-  let lastTime = 0;
-  const throttledFn = (param: Param): void => {
-    const now = Date.now();
-    if (now - lastTime > timeFrame) {
-      debug(() => '[throttle] Run fn() at ' + String(now));
-      fn(param);
-      lastTime = now;
-    }
-  };
-  const resetThrottle = (): void => {
-    lastTime = 0;
-  };
-  return {
-    throttledFn,
-    resetThrottle,
-  };
-}
-
-class QueueImpl implements Queue {
+class Queue implements IQueue {
   private throttleControl: ThrottleControl<QueueNotificationConfig>;
   private withStore: WithStore;
   private disablePersistence = false;
@@ -117,15 +45,21 @@ class QueueImpl implements Queue {
     this.withStore = createStore(config.dbName, 'beacons', 'timestamp', {
       onSuccess: () => {
         if (measureCreate) {
-          performance.measure(measureCreate.createSuccessMeasure, measureCreate.createStartMark);
+          performance.measure(
+            measureCreate.createSuccessMeasure,
+            measureCreate.createStartMark
+          );
         }
       },
       onError: () => {
         if (measureCreate) {
-          performance.measure(measureCreate.createFailMeasure, measureCreate.createStartMark);
+          performance.measure(
+            measureCreate.createFailMeasure,
+            measureCreate.createStartMark
+          );
         }
         this.disablePersistence = true;
-      }
+      },
     });
     this.throttleControl = throttle(
       this.replayEntries.bind(this),
@@ -153,7 +87,7 @@ class QueueImpl implements Queue {
         })
         .catch(() => {
           this.disablePersistence = true;
-          logError(() => 'push failed')
+          logError(() => 'push failed');
         });
     };
     const shouldUseIdle = this.config.useIdle?.() ?? false;
@@ -166,7 +100,7 @@ class QueueImpl implements Queue {
     }
     return clear(this.withStore).catch(() => {
       this.disablePersistence = true;
-      logError(() => 'clear failed')
+      logError(() => 'clear failed');
     });
   }
 
@@ -176,7 +110,7 @@ class QueueImpl implements Queue {
     }
     return peek<RetryEntry>(count, this.withStore).catch(() => {
       this.disablePersistence = true;
-      logError(() => 'peek failed')
+      logError(() => 'peek failed');
       return [];
     });
   }
@@ -187,7 +121,7 @@ class QueueImpl implements Queue {
     }
     return peekBack<RetryEntry>(count, this.withStore).catch(() => {
       this.disablePersistence = true;
-      logError(() => 'peekBack failed')
+      logError(() => 'peekBack failed');
       return [];
     });
   }
@@ -203,10 +137,11 @@ class QueueImpl implements Queue {
           if (entries.length > 0) {
             const { url, body, headers, timestamp, statusCode, attemptCount } =
               entries[0];
-            debug(() =>
-              `header: ${String(
-                this.config.headerName
-              )}; attemptCount: ${attemptCount}`
+            debug(
+              () =>
+                `header: ${String(
+                  this.config.headerName
+                )}; attemptCount: ${attemptCount}`
             );
             const fetch = fetchFn;
             return fetch(
@@ -224,16 +159,18 @@ class QueueImpl implements Queue {
                 this.replayEntries(config);
               } else {
                 if (attemptCount + 1 > this.config.attemptLimit) {
-                  debug(() =>
-                    'Exceeded attempt count, dropping the entry: ' + JSON.stringify(
-                      {
-                        url,
-                        timestamp,
-                        statusCode,
-                      },
-                      null,
-                      2
-                    )
+                  debug(
+                    () =>
+                      'Exceeded attempt count, dropping the entry: ' +
+                      JSON.stringify(
+                        {
+                          url,
+                          timestamp,
+                          statusCode,
+                        },
+                        null,
+                        2
+                      )
                   );
                   return;
                 }
@@ -243,17 +180,18 @@ class QueueImpl implements Queue {
                     maybeError.statusCode
                   )
                 ) {
-                  debug(() =>
-                    'Replaying the entry failed, pushing back to IDB: ' +
-                    JSON.stringify(
-                      {
-                        url,
-                        timestamp,
-                        statusCode,
-                      },
-                      null,
-                      2
-                    )
+                  debug(
+                    () =>
+                      'Replaying the entry failed, pushing back to IDB: ' +
+                      JSON.stringify(
+                        {
+                          url,
+                          timestamp,
+                          statusCode,
+                        },
+                        null,
+                        2
+                      )
                   );
                   return pushIfNotClearing(
                     {
@@ -283,8 +221,8 @@ class QueueImpl implements Queue {
   }
 }
 
-class NoopQueue {
-  onNotify(_config: QueueNotificationConfig): void {
+class NoopQueue implements IQueue {
+  onNotify(): void {
     // noop
   }
   push(): void {
@@ -304,16 +242,16 @@ class NoopQueue {
 /**
  * @public
  */
-export class RetryDB {
+export class RetryDB implements IRetryDB {
   static hasSupport =
     typeof globalThis !== 'undefined' && !!globalThis.indexedDB;
 
-  private queue: Queue;
+  private queue: IQueue;
   private beaconListeners = new Set<() => void>();
 
   constructor(config: RetryDBConfig, compress = false) {
     this.queue = RetryDB.hasSupport
-      ? new QueueImpl(config, compress)
+      ? new Queue(config, compress)
       : new NoopQueue();
   }
 

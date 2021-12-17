@@ -17,6 +17,7 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  Function | Description |
 |  --- | --- |
 |  [createBeacon(init)](./beacon-transporter.createbeacon.md) |  |
+|  [createBeacon(init)](./beacon-transporter.createbeacon_1.md) |  |
 
 ## Interfaces
 
@@ -24,10 +25,15 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  --- | --- |
 |  [BeaconConfig](./beacon-transporter.beaconconfig.md) |  |
 |  [BeaconInit](./beacon-transporter.beaconinit.md) |  |
+|  [BeaconInitWithCustomDB](./beacon-transporter.beaconinitwithcustomdb.md) |  |
+|  [IRetryDB](./beacon-transporter.iretrydb.md) |  |
+|  [IRetryDBBase](./beacon-transporter.iretrydbbase.md) |  |
 |  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
+|  [QueueNotificationConfig](./beacon-transporter.queuenotificationconfig.md) |  |
 |  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |
 |  [ResponseRetryRejection](./beacon-transporter.responseretryrejection.md) |  |
 |  [RetryDBConfig](./beacon-transporter.retrydbconfig.md) |  |
+|  [RetryEntry](./beacon-transporter.retryentry.md) |  |
 
 ## Type Aliases
 

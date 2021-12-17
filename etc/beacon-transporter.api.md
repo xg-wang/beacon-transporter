@@ -33,12 +33,50 @@ export interface BeaconInit {
 }
 
 // @public (undocumented)
+export interface BeaconInitWithCustomDB<CustomRetryDBType> {
+    // (undocumented)
+    beaconConfig?: BeaconConfig;
+    // (undocumented)
+    compress?: boolean;
+    // (undocumented)
+    retryDB: CustomRetryDBType;
+}
+
+// @public (undocumented)
 export function createBeacon(init?: BeaconInit): {
     beacon: BeaconFunc;
     database: RetryDB;
 };
 
+// @public (undocumented)
+export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: BeaconInitWithCustomDB<CustomRetryDBType>): {
+    beacon: BeaconFunc;
+    database: CustomRetryDBType;
+};
+
 export { gzipSync }
+
+// @public (undocumented)
+export interface IRetryDB extends IRetryDBBase {
+    // (undocumented)
+    clearQueue(): Promise<void>;
+    // (undocumented)
+    peekBackQueue(count: number): Promise<RetryEntry[]>;
+    // (undocumented)
+    peekQueue(count: number): Promise<RetryEntry[]>;
+}
+
+// @public (undocumented)
+export interface IRetryDBBase {
+    // (undocumented)
+    notifyQueue(config: QueueNotificationConfig): void;
+    // (undocumented)
+    onClear(cb: () => void): void;
+    // (undocumented)
+    pushToQueue(entry: RetryEntry): void;
+    // (undocumented)
+    removeOnClear(cb: () => void): void;
+}
 
 // @public (undocumented)
 export interface NetworkRetryRejection {
@@ -46,6 +84,12 @@ export interface NetworkRetryRejection {
     statusCode: undefined;
     // (undocumented)
     type: 'network';
+}
+
+// @public (undocumented)
+export interface QueueNotificationConfig {
+    // (undocumented)
+    allowedPersistRetryStatusCodes: number[];
 }
 
 // @public (undocumented)
@@ -65,14 +109,12 @@ export interface ResponseRetryRejection {
 }
 
 // @public (undocumented)
-export class RetryDB {
+export class RetryDB implements IRetryDB {
     constructor(config: RetryDBConfig, compress?: boolean);
     // (undocumented)
     clearQueue(): Promise<void>;
     // (undocumented)
     static hasSupport: boolean;
-    // Warning: (ae-forgotten-export) The symbol "QueueNotificationConfig" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     notifyQueue(config: QueueNotificationConfig): void;
     // (undocumented)
@@ -81,8 +123,6 @@ export class RetryDB {
     peekBackQueue(count: number): Promise<RetryEntry[]>;
     // (undocumented)
     peekQueue(count: number): Promise<RetryEntry[]>;
-    // Warning: (ae-forgotten-export) The symbol "RetryEntry" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     pushToQueue(entry: RetryEntry): void;
     // (undocumented)
@@ -113,6 +153,22 @@ export interface RetryDBConfig {
     throttleWait: number;
     // (undocumented)
     useIdle?: () => boolean;
+}
+
+// @public (undocumented)
+export interface RetryEntry {
+    // (undocumented)
+    attemptCount: number;
+    // (undocumented)
+    body: string;
+    // (undocumented)
+    headers?: Record<string, string>;
+    // (undocumented)
+    statusCode?: number;
+    // (undocumented)
+    timestamp: number;
+    // (undocumented)
+    url: string;
 }
 
 // @public (undocumented)

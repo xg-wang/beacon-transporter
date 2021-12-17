@@ -6,7 +6,7 @@ import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
 import type { createBeacon } from '../src/';
-import type { RetryEntry } from '../src/queue';
+import type { RetryEntry } from '../src/';
 import { log } from './utils';
 
 declare global {

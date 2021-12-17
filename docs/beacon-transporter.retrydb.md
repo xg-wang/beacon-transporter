@@ -8,8 +8,9 @@
 <b>Signature:</b>
 
 ```typescript
-export declare class RetryDB 
+export declare class RetryDB implements IRetryDB 
 ```
+<b>Implements:</b> [IRetryDB](./beacon-transporter.iretrydb.md)
 
 ## Constructors
 
