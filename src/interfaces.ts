@@ -73,6 +73,14 @@ export interface RetryDBConfig {
   };
 }
 
+export interface LocalStorageRetryDBConfig {
+  keyName: string;
+  headerName?: string;
+  attemptLimit: number;
+  throttleWait: number;
+  compressFetch: boolean;
+}
+
 /**
  * @public
  */

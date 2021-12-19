@@ -18,6 +18,7 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  --- | --- |
 |  [createBeacon(init)](./beacon-transporter.createbeacon.md) |  |
 |  [createBeacon(init)](./beacon-transporter.createbeacon_1.md) |  |
+|  [createLocalStorageRetryDB({ keyName, throttleWait, headerName, attemptLimit, compressFetch, })](./beacon-transporter.createlocalstorageretrydb.md) |  |
 
 ## Interfaces
 
@@ -28,6 +29,7 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  [BeaconInitWithCustomDB](./beacon-transporter.beaconinitwithcustomdb.md) |  |
 |  [IRetryDB](./beacon-transporter.iretrydb.md) |  |
 |  [IRetryDBBase](./beacon-transporter.iretrydbbase.md) |  |
+|  [LocalStorageRetryDBConfig](./beacon-transporter.localstorageretrydbconfig.md) |  |
 |  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
 |  [QueueNotificationConfig](./beacon-transporter.queuenotificationconfig.md) |  |
 |  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |
@@ -40,5 +42,6 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  Type Alias | Description |
 |  --- | --- |
 |  [BeaconFunc](./beacon-transporter.beaconfunc.md) |  |
+|  [LocalStorageRetryDB](./beacon-transporter.localstorageretrydb.md) |  |
 |  [RetryRejection](./beacon-transporter.retryrejection.md) |  |
 
