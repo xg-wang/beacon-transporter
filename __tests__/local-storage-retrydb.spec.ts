@@ -91,10 +91,10 @@ describe.each([['chromium'], ['webkit']])(
         });
         db.pushToQueue(entry);
         return new Promise((res) => setTimeout(res, 100)).then(() => {
-          return localStorage.getItem('beacon-transporter-storage');
+          return db.peekQueue();
         });
       }, entry);
-      expect(JSON.parse(result)).toEqual([entry]);
+      expect(result).toEqual([entry]);
     });
 
     it('can delete localStorage items', async () => {

@@ -17,4 +17,5 @@ export interface LocalStorageRetryDB extends IRetryDBBase
 |  Property | Type | Description |
 |  --- | --- | --- |
 |  [clearQueue](./beacon-transporter.localstorageretrydb.clearqueue.md) | () =&gt; void |  |
+|  [peekQueue](./beacon-transporter.localstorageretrydb.peekqueue.md) | (count?: number) =&gt; [RetryEntry](./beacon-transporter.retryentry.md)<!-- -->\[\] |  |
 

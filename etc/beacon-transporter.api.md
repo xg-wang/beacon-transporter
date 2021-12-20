@@ -85,6 +85,8 @@ export interface IRetryDBBase {
 export interface LocalStorageRetryDB extends IRetryDBBase {
     // (undocumented)
     clearQueue: () => void;
+    // (undocumented)
+    peekQueue: (count?: number) => RetryEntry[];
 }
 
 // @public (undocumented)

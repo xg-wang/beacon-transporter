@@ -7,19 +7,14 @@ import type {
   QueueNotificationConfig,
   RetryEntry,
 } from './interfaces';
-import {
-  createHeaders,
-  debug,
-  logError,
-  scheduleTask,
-  throttle,
-} from './utils';
+import { createHeaders, logError, scheduleTask, throttle } from './utils';
 
 /**
  * @public
  */
 export interface LocalStorageRetryDB extends IRetryDBBase {
   clearQueue: () => void;
+  peekQueue: (count?: number) => RetryEntry[];
 }
 
 /**
@@ -120,7 +115,7 @@ export function createLocalStorageRetryDB({
         })
           .then(() => throttleControl.resetThrottle())
           .catch((reason) => {
-            debug(() => (reason as unknown as Error)?.message);
+            logError(() => (reason as unknown as Error)?.message);
           });
       });
     },
@@ -135,6 +130,24 @@ export function createLocalStorageRetryDB({
         return;
       }
       window.localStorage.removeItem(keyName);
+    },
+    peekQueue(count): RetryEntry[] {
+      if (!isSupported) {
+        return [];
+      }
+      try {
+        const items = window.localStorage.getItem(keyName);
+        if (!items) return [];
+        const persistedEntries = JSON.parse(items) as RetryEntry[];
+        return Array.isArray(persistedEntries)
+          ? persistedEntries.slice(0, count)
+          : [];
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          logError(() => (error as Error).message);
+        }
+        return [];
+      }
     },
     onClear: () => {
       // NOOP, uses webstorage-mutex for concurrency control
