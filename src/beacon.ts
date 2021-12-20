@@ -1,3 +1,4 @@
+import { BeaconInitWithCustomDB, IRetryDBBase } from '.';
 import { fetchFn, supportFetch } from './fetch';
 import type {
   BeaconConfig,
@@ -20,7 +21,7 @@ const defaultInMemoryRetryStatusCodes = [502, 504];
  */
 const defaultPersistRetryStatusCodes = [429, 503];
 
-class Beacon {
+class Beacon<RetryDBType extends IRetryDBBase> {
   private timestamp: number;
   private persistRetryStatusCodes: number[];
   private inMemoryRetryStatusCodes: number[];
@@ -32,7 +33,7 @@ class Beacon {
     private url: string,
     private body: string,
     private config: BeaconConfig,
-    private db: RetryDB,
+    private db: RetryDBType,
     private compress: boolean = false
   ) {
     this.timestamp = Date.now();
@@ -159,40 +160,57 @@ class Beacon {
 /**
  * @public
  */
-export function createBeacon(init: BeaconInit = {}): {
+export function createBeacon(init?: BeaconInit): {
   beacon: BeaconFunc;
   database: RetryDB;
+};
+/**
+ * @public
+ */
+export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
+  init?: BeaconInitWithCustomDB<CustomRetryDBType>
+): {
+  beacon: BeaconFunc;
+  database: CustomRetryDBType;
+};
+/**
+ * @public
+ */
+export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
+  init: BeaconInit | BeaconInitWithCustomDB<CustomRetryDBType> = {}
+): {
+  beacon: BeaconFunc;
+  database: CustomRetryDBType | RetryDB;
 } {
-  const { beaconConfig, retryDBConfig, compress } = prepareConfig(init);
-  const database = new RetryDB(retryDBConfig, compress);
-  const beacon: BeaconFunc = (url, body, headers) => {
-    if (!supportFetch) {
-      return Promise.resolve(undefined);
-    }
-    return new Beacon(url, body, beaconConfig, database, compress).send(
-      headers
-    );
-  };
-  return { beacon, database };
-}
-
-function prepareConfig(init: BeaconInit): Required<BeaconInit> {
   const beaconConfig = init.beaconConfig || {
     retry: {
       limit: 0,
     },
   };
-  const retryDBConfig = init.retryDBConfig || {
-    dbName: 'beacon-transporter',
-    attemptLimit: 3,
-    maxNumber: 1000,
-    batchEvictionNumber: 300,
-    throttleWait: 5 * 60 * 1000,
-  };
-  const retryHeader = beaconConfig.retry.headerName;
-  if (retryHeader && !retryDBConfig.headerName) {
-    retryDBConfig.headerName = retryHeader;
-  }
   const compress = init.compress || false;
-  return { beaconConfig, retryDBConfig, compress };
+  let retryDB: CustomRetryDBType | RetryDB;
+  if ('retryDB' in init) {
+    retryDB = init.retryDB;
+  } else {
+    const retryDBConfig = init.retryDBConfig || {
+      dbName: 'beacon-transporter',
+      attemptLimit: 3,
+      maxNumber: 1000,
+      batchEvictionNumber: 300,
+      throttleWait: 5 * 60 * 1000,
+    };
+    const { headerName } = beaconConfig.retry;
+    if (headerName && !retryDBConfig.headerName) {
+      retryDBConfig.headerName = headerName;
+    }
+    retryDB = new RetryDB(retryDBConfig, compress);
+  }
+
+  const beacon: BeaconFunc = (url, body, headers) => {
+    if (!supportFetch) {
+      return Promise.resolve(undefined);
+    }
+    return new Beacon(url, body, beaconConfig, retryDB, compress).send(headers);
+  };
+  return { beacon, database: retryDB };
 }

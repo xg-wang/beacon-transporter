@@ -6,6 +6,52 @@ export interface BeaconInit {
   retryDBConfig?: RetryDBConfig;
   compress?: boolean;
 }
+/**
+ * @public
+ */
+export interface BeaconInitWithCustomDB<CustomRetryDBType> {
+  beaconConfig?: BeaconConfig;
+  retryDB: CustomRetryDBType;
+  compress?: boolean;
+}
+
+/**
+ * @public
+ */
+export interface RetryEntry {
+  url: string;
+  body: string;
+  headers?: Record<string, string>;
+  statusCode?: number;
+  timestamp: number;
+  attemptCount: number;
+}
+
+/**
+ * @public
+ */
+export interface IRetryDBBase {
+  pushToQueue(entry: RetryEntry): void;
+  notifyQueue(config: QueueNotificationConfig): void;
+  onClear(cb: () => void): void;
+  removeOnClear(cb: () => void): void;
+}
+
+/**
+ * @public
+ */
+export interface IRetryDB extends IRetryDBBase {
+  clearQueue(): Promise<void>;
+  peekQueue(count: number): Promise<RetryEntry[]>;
+  peekBackQueue(count: number): Promise<RetryEntry[]>;
+}
+
+/**
+ * @public
+ */
+export interface QueueNotificationConfig {
+  allowedPersistRetryStatusCodes: number[];
+}
 
 /**
  * @public
@@ -20,11 +66,20 @@ export interface RetryDBConfig {
   useIdle?: () => boolean;
   measureIDB?: {
     create?: {
-      createStartMark: string,
-      createSuccessMeasure: string,
-      createFailMeasure: string,
-    }
-  }
+      createStartMark: string;
+      createSuccessMeasure: string;
+      createFailMeasure: string;
+    };
+  };
+}
+
+export interface LocalStorageRetryDBConfig {
+  keyName: string;
+  maxNumber: number;
+  headerName?: string;
+  attemptLimit: number;
+  throttleWait: number;
+  compressFetch: boolean;
 }
 
 /**

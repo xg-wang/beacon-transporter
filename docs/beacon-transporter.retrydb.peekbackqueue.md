@@ -18,5 +18,5 @@ peekBackQueue(count: number): Promise<RetryEntry[]>;
 
 <b>Returns:</b>
 
-Promise&lt;RetryEntry\[\]&gt;
+Promise&lt;[RetryEntry](./beacon-transporter.retryentry.md)<!-- -->\[\]&gt;
 
