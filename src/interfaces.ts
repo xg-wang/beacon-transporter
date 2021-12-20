@@ -75,6 +75,7 @@ export interface RetryDBConfig {
 
 export interface LocalStorageRetryDBConfig {
   keyName: string;
+  maxNumber: number;
   headerName?: string;
   attemptLimit: number;
   throttleWait: number;

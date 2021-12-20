@@ -18,5 +18,6 @@ export interface LocalStorageRetryDBConfig
 |  [compressFetch](./beacon-transporter.localstorageretrydbconfig.compressfetch.md) | boolean |  |
 |  [headerName?](./beacon-transporter.localstorageretrydbconfig.headername.md) | string | <i>(Optional)</i> |
 |  [keyName](./beacon-transporter.localstorageretrydbconfig.keyname.md) | string |  |
+|  [maxNumber](./beacon-transporter.localstorageretrydbconfig.maxnumber.md) | number |  |
 |  [throttleWait](./beacon-transporter.localstorageretrydbconfig.throttlewait.md) | number |  |
 

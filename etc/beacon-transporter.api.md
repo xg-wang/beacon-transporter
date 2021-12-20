@@ -55,7 +55,7 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: Beac
 };
 
 // @public (undocumented)
-export function createLocalStorageRetryDB({ keyName, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
+export function createLocalStorageRetryDB({ keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
 
 export { gzipSync }
 
@@ -99,6 +99,8 @@ export interface LocalStorageRetryDBConfig {
     headerName?: string;
     // (undocumented)
     keyName: string;
+    // (undocumented)
+    maxNumber: number;
     // (undocumented)
     throttleWait: number;
 }

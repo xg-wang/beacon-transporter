@@ -8,14 +8,14 @@
 <b>Signature:</b>
 
 ```typescript
-export declare function createLocalStorageRetryDB({ keyName, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
+export declare function createLocalStorageRetryDB({ keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
 ```
 
 ## Parameters
 
 |  Parameter | Type | Description |
 |  --- | --- | --- |
-|  { keyName, throttleWait, headerName, attemptLimit, compressFetch, } | [LocalStorageRetryDBConfig](./beacon-transporter.localstorageretrydbconfig.md) |  |
+|  { keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, } | [LocalStorageRetryDBConfig](./beacon-transporter.localstorageretrydbconfig.md) |  |
 
 <b>Returns:</b>
 

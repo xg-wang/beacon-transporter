@@ -85,16 +85,30 @@ describe.each([['chromium'], ['webkit']])(
         const db = window.createLocalStorageRetryDB({
           keyName: 'beacon-transporter-storage',
           throttleWait: 10,
+          maxNumber: 1,
           headerName: 'x-retry-context',
           attemptLimit: 2,
           compressFetch: false,
         });
+        // @ts-ignore
+        window.__db = db;
         db.pushToQueue(entry);
         return new Promise((res) => setTimeout(res, 100)).then(() => {
           return db.peekQueue();
         });
       }, entry);
       expect(result).toEqual([entry]);
+
+      const result2 = await page.evaluate((entry) => {
+        // @ts-ignore
+        const db = window.__db;
+        db.pushToQueue(entry);
+        return new Promise((res) => setTimeout(res, 100)).then(() => {
+          return db.peekQueue();
+        });
+      }, entry);
+      // Exceeding maxNumber should clear everything
+      expect(result2).toEqual([]);
     });
 
     it('can delete localStorage items', async () => {
@@ -109,6 +123,7 @@ describe.each([['chromium'], ['webkit']])(
         const db = window.createLocalStorageRetryDB({
           keyName: 'beacon-transporter-storage',
           throttleWait: 10,
+          maxNumber: 1,
           headerName: 'x-retry-context',
           attemptLimit: 2,
           compressFetch: false,
@@ -159,6 +174,7 @@ describe.each([['chromium'], ['webkit']])(
         const db = window.createLocalStorageRetryDB({
           keyName: 'beacon-transporter-storage',
           throttleWait: 10,
+          maxNumber: 3,
           headerName: 'x-retry-context',
           attemptLimit: 2,
           compressFetch: false,
@@ -208,6 +224,7 @@ describe.each([['chromium'], ['webkit']])(
         const db = window.createLocalStorageRetryDB({
           keyName: 'beacon-transporter-storage',
           throttleWait: 10,
+          maxNumber: 1,
           headerName: 'x-retry-context',
           attemptLimit: 2,
           compressFetch: false,

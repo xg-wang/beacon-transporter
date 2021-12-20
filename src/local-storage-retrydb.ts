@@ -22,6 +22,7 @@ export interface LocalStorageRetryDB extends IRetryDBBase {
  */
 export function createLocalStorageRetryDB({
   keyName,
+  maxNumber,
   throttleWait,
   headerName,
   attemptLimit,
@@ -104,14 +105,28 @@ export function createLocalStorageRetryDB({
       scheduleTask(() => {
         mutex(() => {
           const storageItem = window.localStorage.getItem(keyName);
-          const persistedEntries: RetryEntry[] = storageItem
-            ? (JSON.parse(storageItem) as RetryEntry[])
-            : [];
-          persistedEntries.push(entry);
-          window.localStorage.setItem(
-            keyName,
-            JSON.stringify(persistedEntries)
-          );
+          try {
+            const persistedEntries: RetryEntry[] = storageItem
+              ? (JSON.parse(storageItem) as RetryEntry[])
+              : [];
+            if (
+              Array.isArray(persistedEntries) &&
+              persistedEntries.length + 1 <= maxNumber
+            ) {
+              persistedEntries.push(entry);
+              window.localStorage.setItem(
+                keyName,
+                JSON.stringify(persistedEntries)
+              );
+            } else {
+              window.localStorage.removeItem(keyName);
+            }
+          } catch (error) {
+            if (error instanceof Error) {
+              logError(() => (error as Error).message);
+            }
+            window.localStorage.removeItem(keyName);
+          }
         })
           .then(() => throttleControl.resetThrottle())
           .catch((reason) => {

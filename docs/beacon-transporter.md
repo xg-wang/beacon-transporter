@@ -18,7 +18,7 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  --- | --- |
 |  [createBeacon(init)](./beacon-transporter.createbeacon.md) |  |
 |  [createBeacon(init)](./beacon-transporter.createbeacon_1.md) |  |
-|  [createLocalStorageRetryDB({ keyName, throttleWait, headerName, attemptLimit, compressFetch, })](./beacon-transporter.createlocalstorageretrydb.md) |  |
+|  [createLocalStorageRetryDB({ keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, })](./beacon-transporter.createlocalstorageretrydb.md) |  |
 
 ## Interfaces
 
