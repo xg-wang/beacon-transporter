@@ -234,7 +234,7 @@ describe.each([['chromium'], ['webkit']])(
           JSON.stringify(entries)
         );
         db.notifyQueue({ allowedPersistRetryStatusCodes: [888] });
-        return new Promise((res) => setTimeout(res, 100)).then(() => {
+        return new Promise((res) => setTimeout(res, 1000)).then(() => {
           return localStorage.getItem('beacon-transporter-storage');
         });
       }, entries);
