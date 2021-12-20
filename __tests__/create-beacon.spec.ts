@@ -66,6 +66,7 @@ describe('createBeacon', () => {
       const localStorageDB = createLocalStorageRetryDB({
         keyName: 'beacon-transporter-storage',
         throttleWait: 5 * 60 * 1000,
+        maxNumber: 3,
         headerName: 'x-retry-context',
         attemptLimit: 3,
         compressFetch: true,
