@@ -29,6 +29,7 @@ export function createLocalStorageRetryDB({
   compressFetch,
 }: LocalStorageRetryDBConfig): LocalStorageRetryDB {
   const isSupported = supportLocalStorage();
+  const onClearListeners = new Set<() => void>();
 
   const replayEntries = ({
     allowedPersistRetryStatusCodes,
@@ -141,6 +142,7 @@ export function createLocalStorageRetryDB({
       throttleControl.throttledFn(config);
     },
     clearQueue: () => {
+      onClearListeners.forEach((cb) => cb());
       if (!isSupported) {
         return;
       }
@@ -164,11 +166,11 @@ export function createLocalStorageRetryDB({
         return [];
       }
     },
-    onClear: () => {
-      // NOOP, uses webstorage-mutex for concurrency control
+    onClear: (cb: () => void) => {
+      onClearListeners.add(cb);
     },
-    removeOnClear: () => {
-      // NOOP, uses webstorage-mutex for concurrency control
+    removeOnClear: (cb: () => void) => {
+      onClearListeners.delete(cb);
     },
   };
 }
