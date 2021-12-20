@@ -97,6 +97,31 @@ describe.each([['chromium'], ['webkit']])(
       expect(JSON.parse(result)).toEqual([entry]);
     });
 
+    it('can delete localStorage items', async () => {
+      const entry = {
+        url: '/api/200',
+        body: '',
+        statusCode: 888,
+        timestamp: Date.now(),
+        attemptCount: 1,
+      };
+      const result = await page.evaluate((entry) => {
+        const db = window.createLocalStorageRetryDB({
+          keyName: 'beacon-transporter-storage',
+          throttleWait: 10,
+          headerName: 'x-retry-context',
+          attemptLimit: 2,
+          compressFetch: false,
+        });
+        db.pushToQueue(entry);
+        return new Promise((res) => setTimeout(res, 100)).then(() => {
+          db.clearQueue();
+          return localStorage.getItem('beacon-transporter-storage');
+        });
+      }, entry);
+      expect(result).toEqual(null);
+    });
+
     it('retries from localStorage when notified, and push back failed entries', async () => {
       const serverResults = [];
       server.post('/api/:status', ({ params, headers }, res) => {

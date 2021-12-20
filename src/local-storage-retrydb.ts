@@ -18,7 +18,9 @@ import {
 /**
  * @public
  */
-export type LocalStorageRetryDB = IRetryDBBase;
+export interface LocalStorageRetryDB extends IRetryDBBase {
+  clearQueue: () => void;
+}
 
 /**
  * @public
@@ -127,6 +129,12 @@ export function createLocalStorageRetryDB({
         return;
       }
       throttleControl.throttledFn(config);
+    },
+    clearQueue: () => {
+      if (!isSupported) {
+        return;
+      }
+      window.localStorage.removeItem(keyName);
     },
     onClear: () => {
       // NOOP, uses webstorage-mutex for concurrency control

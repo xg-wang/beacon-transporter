@@ -2,13 +2,19 @@
 
 [Home](./index.md) &gt; [beacon-transporter](./beacon-transporter.md) &gt; [LocalStorageRetryDB](./beacon-transporter.localstorageretrydb.md)
 
-## LocalStorageRetryDB type
+## LocalStorageRetryDB interface
 
 
 <b>Signature:</b>
 
 ```typescript
-export declare type LocalStorageRetryDB = IRetryDBBase;
+export interface LocalStorageRetryDB extends IRetryDBBase 
 ```
-<b>References:</b> [IRetryDBBase](./beacon-transporter.iretrydbbase.md)
+<b>Extends:</b> [IRetryDBBase](./beacon-transporter.iretrydbbase.md)
+
+## Properties
+
+|  Property | Type | Description |
+|  --- | --- | --- |
+|  [clearQueue](./beacon-transporter.localstorageretrydb.clearqueue.md) | () =&gt; void |  |
 

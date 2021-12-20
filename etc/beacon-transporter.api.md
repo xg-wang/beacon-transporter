@@ -82,7 +82,10 @@ export interface IRetryDBBase {
 }
 
 // @public (undocumented)
-export type LocalStorageRetryDB = IRetryDBBase;
+export interface LocalStorageRetryDB extends IRetryDBBase {
+    // (undocumented)
+    clearQueue: () => void;
+}
 
 // @public (undocumented)
 export interface LocalStorageRetryDBConfig {
