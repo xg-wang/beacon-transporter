@@ -93,7 +93,7 @@ describe.each([['chromium'], ['webkit']])(
         // @ts-ignore
         window.__db = db;
         db.pushToQueue(entry);
-        return new Promise((res) => setTimeout(res, 100)).then(() => {
+        return new Promise((res) => setTimeout(res, 1000)).then(() => {
           return db.peekQueue();
         });
       }, entry);
@@ -103,7 +103,7 @@ describe.each([['chromium'], ['webkit']])(
         // @ts-ignore
         const db = window.__db;
         db.pushToQueue(entry);
-        return new Promise((res) => setTimeout(res, 100)).then(() => {
+        return new Promise((res) => setTimeout(res, 1000)).then(() => {
           return db.peekQueue();
         });
       }, entry);
@@ -129,7 +129,7 @@ describe.each([['chromium'], ['webkit']])(
           compressFetch: false,
         });
         db.pushToQueue(entry);
-        return new Promise((res) => setTimeout(res, 100)).then(() => {
+        return new Promise((res) => setTimeout(res, 1000)).then(() => {
           db.clearQueue();
           return localStorage.getItem('beacon-transporter-storage');
         });
