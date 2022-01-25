@@ -1,11 +1,12 @@
 import { BeaconInitWithCustomDB, IRetryDBBase } from '.';
-import { fetchFn, supportFetch } from './fetch';
+import { fetchFn, isGlobalFetchSupported } from './fetch';
 import type {
   BeaconConfig,
   BeaconFunc,
   BeaconInit,
   RequestSuccess,
   RetryRejection,
+  RetryRequestResponse,
 } from './interfaces';
 import { RetryDB } from './queue';
 import { createHeaders, debug, sleep } from './utils';
@@ -47,14 +48,12 @@ class Beacon<RetryDBType extends IRetryDBBase> {
       ((retryCountLeft) => this.getAttemptCount(retryCountLeft) * 2000);
   }
 
-  send(
-    headers: Record<string, string> = {}
-  ): Promise<RetryRejection | RequestSuccess | undefined> {
+  send(headers: Record<string, string> = {}): Promise<RetryRequestResponse> {
     this.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
-      (headers: Record<string, string>) =>
-        fetchFn(this.url, this.body, headers, this.compress),
+      (fetchHeaders: Record<string, string>) =>
+        fetchFn(this.url, this.body, fetchHeaders, this.compress),
       initialRetryCountLeft,
       headers
     ).finally(() => {
@@ -78,13 +77,11 @@ class Beacon<RetryDBType extends IRetryDBBase> {
    * @returns result of the retry operation, true if fn ever resolved during retry, false if all retry failed
    */
   private retry(
-    fn: (
-      headers: Record<string, string>
-    ) => Promise<RetryRejection | RequestSuccess | undefined>,
+    fn: (headers: Record<string, string>) => Promise<RetryRequestResponse>,
     retryCountLeft: number,
     headers: Record<string, string>,
     errorCode?: number
-  ): Promise<RetryRejection | RequestSuccess | undefined> {
+  ): Promise<RetryRequestResponse> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
       createHeaders(
@@ -207,7 +204,7 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
   }
 
   const beacon: BeaconFunc = (url, body, headers) => {
-    if (!supportFetch) {
+    if (!isGlobalFetchSupported()) {
       return Promise.resolve(undefined);
     }
     return new Beacon(url, body, beaconConfig, retryDB, compress).send(headers);

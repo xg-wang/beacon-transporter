@@ -201,4 +201,7 @@ export interface RetryEntry {
 // @public (undocumented)
 export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
+// @public (undocumented)
+export type RetryRequestResponse = RequestSuccess | RetryRejection | undefined;
+
 ```

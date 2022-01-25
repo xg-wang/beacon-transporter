@@ -1,11 +1,17 @@
 import { RequestSuccess, RetryRejection } from './interfaces';
 import { createRequestInit } from './utils';
 
-export const supportFetch =
-  typeof globalThis !== 'undefined' && 'fetch' in globalThis;
+export function isGlobalFetchSupported(): boolean {
+  return typeof window !== 'undefined' && typeof window.fetch === 'function';
+}
 
-export const supportKeepaliveFetch =
-  supportFetch && 'keepalive' in new Request('');
+export function isKeepaliveFetchSupported(): boolean {
+  try {
+    return isGlobalFetchSupported() && 'keepalive' in new Request('');
+  } catch (_error) {
+    return false;
+  }
+}
 
 const supportSendBeacon =
   typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
@@ -84,4 +90,6 @@ function fallbackFetch(
   });
 }
 
-export const fetchFn = supportKeepaliveFetch ? keepaliveFetch : fallbackFetch;
+export const fetchFn = isKeepaliveFetchSupported()
+  ? keepaliveFetch
+  : fallbackFetch;

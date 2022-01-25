@@ -44,4 +44,5 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  --- | --- |
 |  [BeaconFunc](./beacon-transporter.beaconfunc.md) |  |
 |  [RetryRejection](./beacon-transporter.retryrejection.md) |  |
+|  [RetryRequestResponse](./beacon-transporter.retryrequestresponse.md) |  |
 

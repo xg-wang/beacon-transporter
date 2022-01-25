@@ -131,6 +131,11 @@ export interface RequestSuccess {
 /**
  * @public
  */
+export type RetryRequestResponse = RequestSuccess | RetryRejection | undefined;
+
+/**
+ * @public
+ */
 export type BeaconFunc = (
   url: string,
   body: string,
