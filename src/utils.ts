@@ -45,7 +45,7 @@ export function createRequestInit({
   return {
     body: finalBody,
     keepalive,
-    credentials: 'same-origin',
+    credentials: 'include',
     headers: finalHeaders,
     method: 'POST',
     mode: 'cors',
