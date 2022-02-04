@@ -1,5 +1,6 @@
+import { gzipSync } from 'fflate';
+
 import { RequestSuccess, RetryRejection } from './interfaces';
-import { createRequestInit } from './utils';
 
 export function isGlobalFetchSupported(): boolean {
   return typeof window !== 'undefined' && typeof window.fetch === 'function';
@@ -15,6 +16,38 @@ export function isKeepaliveFetchSupported(): boolean {
 
 const supportSendBeacon =
   typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
+
+function createRequestInit({
+  body,
+  keepalive,
+  headers,
+  compress,
+}: {
+  body: string;
+  keepalive: boolean;
+  headers: Record<string, string>;
+  compress: boolean;
+}): RequestInit {
+  const finalHeaders = new Headers(headers);
+  if (!finalHeaders.get('content-type')) {
+    finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
+  }
+
+  let finalBody: string | Uint8Array = body;
+  if (compress && typeof TextEncoder !== 'undefined') {
+    finalBody = gzipSync(new TextEncoder().encode(body));
+    finalHeaders.set('content-encoding', 'gzip');
+  }
+
+  return {
+    body: finalBody,
+    keepalive,
+    credentials: 'include',
+    headers: finalHeaders,
+    method: 'POST',
+    mode: 'cors',
+  };
+}
 
 function keepaliveFetch(
   url: string,
