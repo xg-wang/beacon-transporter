@@ -140,4 +140,4 @@ export type BeaconFunc = (
   url: string,
   body: string,
   headers?: Record<string, string>
-) => Promise<RetryRejection | RequestSuccess | undefined>;
+) => Promise<RetryRejection | RequestSuccess | undefined> | undefined;

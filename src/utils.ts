@@ -1,5 +1,3 @@
-import { gzipSync } from 'fflate';
-
 declare global {
   interface Window {
     __DEBUG_BEACON_TRANSPORTER?: boolean;
@@ -15,41 +13,6 @@ export function createHeaders(
   if (!headerName || attempt < 1) return headers;
   headers[headerName] = JSON.stringify({ attempt, errorCode });
   return headers;
-}
-
-/**
- * @public
- */
-export function createRequestInit({
-  body,
-  keepalive,
-  headers,
-  compress,
-}: {
-  body: string;
-  keepalive: boolean;
-  headers: Record<string, string>;
-  compress: boolean;
-}): RequestInit {
-  const finalHeaders = new Headers(headers);
-  if (!finalHeaders.get('content-type')) {
-    finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
-  }
-
-  let finalBody: string | Uint8Array = body;
-  if (compress && typeof TextEncoder !== 'undefined') {
-    finalBody = gzipSync(new TextEncoder().encode(body));
-    finalHeaders.set('content-encoding', 'gzip');
-  }
-
-  return {
-    body: finalBody,
-    keepalive,
-    credentials: 'include',
-    headers: finalHeaders,
-    method: 'POST',
-    mode: 'cors',
-  };
 }
 
 export function sleep(ms: number): Promise<void> {
