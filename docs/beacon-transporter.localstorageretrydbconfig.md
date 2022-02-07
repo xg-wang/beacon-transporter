@@ -4,6 +4,10 @@
 
 ## LocalStorageRetryDBConfig interface
 
+> This API is provided as a preview for developers and may change based on feedback that we receive. Do not use this API in a production environment.
+> 
+
+
 <b>Signature:</b>
 
 ```typescript
@@ -14,10 +18,10 @@ export interface LocalStorageRetryDBConfig
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [attemptLimit](./beacon-transporter.localstorageretrydbconfig.attemptlimit.md) | number |  |
-|  [compressFetch](./beacon-transporter.localstorageretrydbconfig.compressfetch.md) | boolean |  |
-|  [headerName?](./beacon-transporter.localstorageretrydbconfig.headername.md) | string | <i>(Optional)</i> |
-|  [keyName](./beacon-transporter.localstorageretrydbconfig.keyname.md) | string |  |
-|  [maxNumber](./beacon-transporter.localstorageretrydbconfig.maxnumber.md) | number |  |
-|  [throttleWait](./beacon-transporter.localstorageretrydbconfig.throttlewait.md) | number |  |
+|  [attemptLimit](./beacon-transporter.localstorageretrydbconfig.attemptlimit.md) | number | <b><i>(BETA)</i></b> |
+|  [compressFetch](./beacon-transporter.localstorageretrydbconfig.compressfetch.md) | boolean | <b><i>(BETA)</i></b> |
+|  [headerName?](./beacon-transporter.localstorageretrydbconfig.headername.md) | string | <b><i>(BETA)</i></b> <i>(Optional)</i> |
+|  [keyName](./beacon-transporter.localstorageretrydbconfig.keyname.md) | string | <b><i>(BETA)</i></b> |
+|  [maxNumber](./beacon-transporter.localstorageretrydbconfig.maxnumber.md) | number | <b><i>(BETA)</i></b> |
+|  [throttleWait](./beacon-transporter.localstorageretrydbconfig.throttlewait.md) | number | <b><i>(BETA)</i></b> |
 

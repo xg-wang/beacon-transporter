@@ -27,10 +27,11 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  [BeaconConfig](./beacon-transporter.beaconconfig.md) |  |
 |  [BeaconInit](./beacon-transporter.beaconinit.md) |  |
 |  [BeaconInitWithCustomDB](./beacon-transporter.beaconinitwithcustomdb.md) |  |
+|  [DisableRetryDBConfig](./beacon-transporter.disableretrydbconfig.md) |  |
 |  [IRetryDB](./beacon-transporter.iretrydb.md) |  |
 |  [IRetryDBBase](./beacon-transporter.iretrydbbase.md) |  |
 |  [LocalStorageRetryDB](./beacon-transporter.localstorageretrydb.md) |  |
-|  [LocalStorageRetryDBConfig](./beacon-transporter.localstorageretrydbconfig.md) |  |
+|  [LocalStorageRetryDBConfig](./beacon-transporter.localstorageretrydbconfig.md) | <b><i>(BETA)</i></b> |
 |  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
 |  [QueueNotificationConfig](./beacon-transporter.queuenotificationconfig.md) |  |
 |  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |

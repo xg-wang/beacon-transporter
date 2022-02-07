@@ -29,7 +29,7 @@ export interface BeaconInit {
     // (undocumented)
     compress?: boolean;
     // (undocumented)
-    retryDBConfig?: RetryDBConfig;
+    retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
 }
 
 // @public (undocumented)
@@ -54,8 +54,16 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: Beac
     database: CustomRetryDBType;
 };
 
+// Warning: (ae-incompatible-release-tags) The symbol "createLocalStorageRetryDB" is marked as @public, but its signature references "LocalStorageRetryDBConfig" which is marked as @beta
+//
 // @public (undocumented)
 export function createLocalStorageRetryDB({ keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
+
+// @public (undocumented)
+export interface DisableRetryDBConfig {
+    // (undocumented)
+    disabled: true;
+}
 
 export { gzipSync }
 
@@ -89,7 +97,7 @@ export interface LocalStorageRetryDB extends IRetryDBBase {
     peekQueue: (count?: number) => RetryEntry[];
 }
 
-// @public (undocumented)
+// @beta (undocumented)
 export interface LocalStorageRetryDBConfig {
     // (undocumented)
     attemptLimit: number;
@@ -137,7 +145,7 @@ export interface ResponseRetryRejection {
 
 // @public (undocumented)
 export class RetryDB implements IRetryDB {
-    constructor(config: RetryDBConfig, compress?: boolean);
+    constructor(config: RetryDBConfig | DisableRetryDBConfig, compress?: boolean);
     // (undocumented)
     clearQueue(): Promise<void>;
     // (undocumented)
@@ -164,6 +172,8 @@ export interface RetryDBConfig {
     batchEvictionNumber: number;
     // (undocumented)
     dbName: string;
+    // (undocumented)
+    disabled?: false;
     // (undocumented)
     headerName?: string;
     // (undocumented)

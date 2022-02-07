@@ -18,6 +18,7 @@ export interface RetryDBConfig
 |  [attemptLimit](./beacon-transporter.retrydbconfig.attemptlimit.md) | number |  |
 |  [batchEvictionNumber](./beacon-transporter.retrydbconfig.batchevictionnumber.md) | number |  |
 |  [dbName](./beacon-transporter.retrydbconfig.dbname.md) | string |  |
+|  [disabled?](./beacon-transporter.retrydbconfig.disabled.md) | false | <i>(Optional)</i> |
 |  [headerName?](./beacon-transporter.retrydbconfig.headername.md) | string | <i>(Optional)</i> |
 |  [maxNumber](./beacon-transporter.retrydbconfig.maxnumber.md) | number |  |
 |  [measureIDB?](./beacon-transporter.retrydbconfig.measureidb.md) | { create?: { createStartMark: string; createSuccessMeasure: string; createFailMeasure: string; }; } | <i>(Optional)</i> |

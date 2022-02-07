@@ -1,12 +1,11 @@
-import createTestServer from 'create-test-server';
+import createTestServer, { Server } from '@xg-wang/create-test-server';
 import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type { createBeacon } from '../src/';
-import type { RetryEntry } from '../src/';
+import type { createBeacon, RetryEntry } from '../src/';
 import { log } from './utils';
 
 declare global {
@@ -40,12 +39,10 @@ describe.each([
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
-  let pageClosedForConsoleLog = false;
-  let server: any;
+  let server: Server;
 
-  function closePage(page: Page): Promise<void> {
-    pageClosedForConsoleLog = true;
-    return page.close({ runBeforeUnload: true });
+  function closePage(p: Page): Promise<void> {
+    return p.close({ runBeforeUnload: true });
   }
 
   beforeAll(async () => {
@@ -60,7 +57,6 @@ describe.each([
 
   beforeEach(async () => {
     log(expect.getState().currentTestName);
-    pageClosedForConsoleLog = false;
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
     server = await createTestServer();
@@ -68,11 +64,6 @@ describe.each([
       response.end('hello!');
     });
     page.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page.goto(server.url);
@@ -83,7 +74,6 @@ describe.each([
   });
 
   afterEach(async () => {
-    pageClosedForConsoleLog = true;
     await context.close();
     await server.close();
   });
@@ -434,7 +424,7 @@ describe.each([
     const results: { status: number; header: string }[] = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
-      const payload = { status, header: headers['x-retry-context'] };
+      const payload = { status, header: headers['x-retry-context'] as string };
       results.push(payload);
       res.status(status).send(`Status: ${status}`);
     });
@@ -531,11 +521,6 @@ describe.each([
     await page2.goto(server.url);
     await page2.addScriptTag(script);
     page2.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.waitForFunction(
@@ -662,11 +647,6 @@ describe.each([
     await page2.goto(server.url);
     await page2.addScriptTag(script);
     page2.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.waitForFunction(

@@ -196,9 +196,12 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
       batchEvictionNumber: 300,
       throttleWait: 5 * 60 * 1000,
     };
-    const { headerName } = beaconConfig.retry;
-    if (headerName && !retryDBConfig.headerName) {
-      retryDBConfig.headerName = headerName;
+    if (
+      !retryDBConfig.disabled &&
+      !retryDBConfig.headerName &&
+      beaconConfig.retry.headerName
+    ) {
+      retryDBConfig.headerName = beaconConfig.retry.headerName;
     }
     retryDB = new RetryDB(retryDBConfig, compress);
   }

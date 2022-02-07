@@ -1,4 +1,4 @@
-import createTestServer from 'create-test-server';
+import createTestServer, { Server } from '@xg-wang/create-test-server';
 import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
@@ -30,8 +30,7 @@ describe.each([['chromium'], ['webkit']])(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
-    let pageClosedForConsoleLog = false;
-    let server: any;
+    let server: Server;
 
     beforeAll(async () => {
       log(`Launch ${browserName}`);
@@ -45,7 +44,6 @@ describe.each([['chromium'], ['webkit']])(
 
     beforeEach(async () => {
       log(expect.getState().currentTestName);
-      pageClosedForConsoleLog = false;
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
@@ -53,11 +51,6 @@ describe.each([['chromium'], ['webkit']])(
         response.end('hello!');
       });
       page.on('console', async (msg) => {
-        const msgs = [];
-        for (let i = 0; i < msg.args().length; ++i) {
-          if (pageClosedForConsoleLog) break;
-          msgs.push(await msg.args()[i].jsonValue());
-        }
         log(`[console.${msg.type()}]\t=> ${msg.text()}`);
       });
       await page.goto(server.url);
@@ -68,7 +61,6 @@ describe.each([['chromium'], ['webkit']])(
     });
 
     afterEach(async () => {
-      pageClosedForConsoleLog = true;
       await context.close();
       await server.close();
     });
