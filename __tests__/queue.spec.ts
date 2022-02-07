@@ -1,12 +1,11 @@
-import createTestServer from 'create-test-server';
+import createTestServer, { Server } from '@xg-wang/create-test-server';
 import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type { createBeacon } from '../src/';
-import type { RetryEntry } from '../src/';
+import type { createBeacon, RetryEntry } from '../src/';
 import { log } from './utils';
 
 declare global {
@@ -40,10 +39,10 @@ describe.each([
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
-  let server: any;
+  let server: Server;
 
-  function closePage(page: Page): Promise<void> {
-    return page.close({ runBeforeUnload: true });
+  function closePage(p: Page): Promise<void> {
+    return p.close({ runBeforeUnload: true });
   }
 
   beforeAll(async () => {
@@ -425,7 +424,7 @@ describe.each([
     const results: { status: number; header: string }[] = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
-      const payload = { status, header: headers['x-retry-context'] };
+      const payload = { status, header: headers['x-retry-context'] as string };
       results.push(payload);
       res.status(status).send(`Status: ${status}`);
     });

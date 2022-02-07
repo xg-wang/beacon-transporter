@@ -1,4 +1,4 @@
-import createTestServer from 'create-test-server';
+import createTestServer, { Server } from '@xg-wang/create-test-server';
 import fs from 'fs';
 import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
@@ -30,7 +30,7 @@ describe.each([['chromium'], ['webkit']])(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
-    let server: any;
+    let server: Server;
 
     beforeAll(async () => {
       log(`Launch ${browserName}`);

@@ -1,9 +1,5 @@
-import {
-  createBeacon,
-  createLocalStorageRetryDB,
-  IRetryDBBase,
-  LocalStorageRetryDB,
-} from '../src';
+import { createBeacon, createLocalStorageRetryDB } from '../dist/bundle.cjs';
+import type { IRetryDBBase, LocalStorageRetryDB } from '../dist/index.d';
 
 describe('createBeacon', () => {
   it('Can run noop when called in node', () => {

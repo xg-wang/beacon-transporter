@@ -4,7 +4,6 @@
     "moduleResolution": "node",
     "module": "es2015",
     "strict": false,
-    "strictNullChecks": true,
     "noEmit": true,
     "esModuleInterop": true,
     "types": [
