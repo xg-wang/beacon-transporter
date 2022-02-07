@@ -3,7 +3,7 @@
  */
 export interface BeaconInit {
   beaconConfig?: BeaconConfig;
-  retryDBConfig?: RetryDBConfig;
+  retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
   compress?: boolean;
 }
 /**
@@ -57,6 +57,7 @@ export interface QueueNotificationConfig {
  * @public
  */
 export interface RetryDBConfig {
+  disabled?: false;
   dbName: string;
   headerName?: string;
   attemptLimit: number;
@@ -73,6 +74,16 @@ export interface RetryDBConfig {
   };
 }
 
+/**
+ * @public
+ */
+export interface DisableRetryDBConfig {
+  disabled: true;
+}
+
+/**
+ * @beta
+ */
 export interface LocalStorageRetryDBConfig {
   keyName: string;
   maxNumber: number;

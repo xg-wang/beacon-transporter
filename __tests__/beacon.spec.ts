@@ -52,11 +52,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     let browser: Browser;
     let context: BrowserContext;
     let page: Page;
-    let pageClosedForConsoleLog = false;
     let server: any;
 
     function closePage(page: Page): Promise<void> {
-      pageClosedForConsoleLog = true;
       return page.close({ runBeforeUnload: true });
     }
 
@@ -72,7 +70,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
     beforeEach(async () => {
       log(expect.getState().currentTestName);
-      pageClosedForConsoleLog = false;
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
@@ -80,11 +77,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         response.end('hello!');
       });
       page.on('console', async (msg) => {
-        const msgs = [];
-        for (let i = 0; i < msg.args().length; ++i) {
-          if (pageClosedForConsoleLog) break;
-          msgs.push(await msg.args()[i].jsonValue());
-        }
         log(`[console.${msg.type()}]\t=> ${msg.text()}`);
       });
       await page.goto(server.url);
@@ -95,7 +87,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     afterEach(async () => {
-      pageClosedForConsoleLog = true;
       await context.close();
       await server.close();
     });
@@ -199,7 +190,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
           },
           [server.url, getCloseTabEvent(name)]
         );
-        pageClosedForConsoleLog = true;
         await closePage(page);
 
         await waitForExpect(() => {
@@ -222,7 +212,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         },
         [server.url, getCloseTabEvent(name)]
       );
-      pageClosedForConsoleLog = true;
       await closePage(page);
 
       expect(results.length).toBeLessThanOrEqual(1);
@@ -237,10 +226,6 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         numberOfRetries++;
         route.abort();
       });
-      // page.on('console', async (msg) => {
-      //   for (let i = 0; i < msg.args().length; ++i)
-      //     log(`${i}: ${await msg.args()[i].jsonValue()}`);
-      // });
       await page.evaluate(
         ([url]) => {
           const { beacon } = window.createBeacon({

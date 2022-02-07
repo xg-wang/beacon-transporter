@@ -7,5 +7,5 @@
 <b>Signature:</b>
 
 ```typescript
-retryDBConfig?: RetryDBConfig;
+retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
 ```

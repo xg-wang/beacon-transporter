@@ -40,11 +40,9 @@ describe.each([
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
-  let pageClosedForConsoleLog = false;
   let server: any;
 
   function closePage(page: Page): Promise<void> {
-    pageClosedForConsoleLog = true;
     return page.close({ runBeforeUnload: true });
   }
 
@@ -60,7 +58,6 @@ describe.each([
 
   beforeEach(async () => {
     log(expect.getState().currentTestName);
-    pageClosedForConsoleLog = false;
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
     server = await createTestServer();
@@ -68,11 +65,6 @@ describe.each([
       response.end('hello!');
     });
     page.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page.goto(server.url);
@@ -83,7 +75,6 @@ describe.each([
   });
 
   afterEach(async () => {
-    pageClosedForConsoleLog = true;
     await context.close();
     await server.close();
   });
@@ -531,11 +522,6 @@ describe.each([
     await page2.goto(server.url);
     await page2.addScriptTag(script);
     page2.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.waitForFunction(
@@ -662,11 +648,6 @@ describe.each([
     await page2.goto(server.url);
     await page2.addScriptTag(script);
     page2.on('console', async (msg) => {
-      const msgs = [];
-      for (let i = 0; i < msg.args().length; ++i) {
-        if (pageClosedForConsoleLog) break;
-        msgs.push(await msg.args()[i].jsonValue());
-      }
       log(`[page-2][console.${msg.type()}]\t=> ${msg.text()}`);
     });
     await page2.waitForFunction(

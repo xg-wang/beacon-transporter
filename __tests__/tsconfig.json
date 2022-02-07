@@ -1,14 +1,18 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "target": "ES2018",
+    "target": "ESNext",
     "moduleResolution": "node",
     "module": "es2015",
     "strict": false,
+    "strictNullChecks": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "types": ["node", "jest"]
+    "types": [
+      "node",
+      "jest"
+    ]
   },
-  "include": ["*.ts"]
+  "include": [
+    "*.ts"
+  ]
 }

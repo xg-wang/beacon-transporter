@@ -10,6 +10,7 @@ import {
 
 import { fetchFn } from './fetch';
 import {
+  DisableRetryDBConfig,
   IRetryDB,
   QueueNotificationConfig,
   RetryDBConfig,
@@ -249,10 +250,11 @@ export class RetryDB implements IRetryDB {
   private queue: IQueue;
   private beaconListeners = new Set<() => void>();
 
-  constructor(config: RetryDBConfig, compress = false) {
-    this.queue = RetryDB.hasSupport
-      ? new Queue(config, compress)
-      : new NoopQueue();
+  constructor(config: RetryDBConfig | DisableRetryDBConfig, compress = false) {
+    this.queue =
+      RetryDB.hasSupport && !config.disabled
+        ? new Queue(config, compress)
+        : new NoopQueue();
   }
 
   pushToQueue(entry: RetryEntry): void {
