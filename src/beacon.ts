@@ -199,7 +199,7 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
     if (
       !retryDBConfig.disabled &&
       !retryDBConfig.headerName &&
-      beaconConfig.retry
+      beaconConfig.retry.headerName
     ) {
       retryDBConfig.headerName = beaconConfig.retry.headerName;
     }
