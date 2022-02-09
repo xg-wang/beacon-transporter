@@ -1,6 +1,6 @@
 {
   "name": "beacon-transporter",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "description": "Transporting data to the server made easy",
   "license": "MIT",
   "author": "Thomas Wang <hi@xgwang.me>",
