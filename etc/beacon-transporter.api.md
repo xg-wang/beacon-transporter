@@ -20,24 +20,18 @@ export interface BeaconConfig {
 }
 
 // @public (undocumented)
-export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined> | undefined;
+export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
 
+// Warning: (ae-forgotten-export) The symbol "BeaconInitBase" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export interface BeaconInit {
-    // (undocumented)
-    beaconConfig?: BeaconConfig;
-    // (undocumented)
-    compress?: boolean;
+export interface BeaconInit extends BeaconInitBase {
     // (undocumented)
     retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
 }
 
 // @public (undocumented)
-export interface BeaconInitWithCustomDB<CustomRetryDBType> {
-    // (undocumented)
-    beaconConfig?: BeaconConfig;
-    // (undocumented)
-    compress?: boolean;
+export interface BeaconInitWithCustomDB<CustomRetryDBType> extends BeaconInitBase {
     // (undocumented)
     retryDB: CustomRetryDBType;
 }
@@ -65,6 +59,12 @@ export interface DisableRetryDBConfig {
     disabled: true;
 }
 
+// Warning: (ae-forgotten-export) The symbol "fallbackFetch" needs to be exported by the entry point index.d.ts
+// Warning: (ae-internal-missing-underscore) The name "fetchFn" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export const fetchFn: typeof fallbackFetch;
+
 export { gzipSync }
 
 // @public (undocumented)
@@ -88,6 +88,12 @@ export interface IRetryDBBase {
     // (undocumented)
     removeOnClear(cb: () => void): void;
 }
+
+// @public (undocumented)
+export function isGlobalFetchSupported(): boolean;
+
+// @public (undocumented)
+export function isKeepaliveFetchSupported(): boolean;
 
 // @public (undocumented)
 export interface LocalStorageRetryDB extends IRetryDBBase {
@@ -213,5 +219,10 @@ export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 // @public (undocumented)
 export type RetryRequestResponse = RequestSuccess | RetryRejection | undefined;
+
+// @public (undocumented)
+export function xhr(url: string, body: string, options?: {
+    headers?: Record<string, string>;
+}): void;
 
 ```

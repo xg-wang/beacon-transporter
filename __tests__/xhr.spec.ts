@@ -5,12 +5,12 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type { createBeacon } from '../src/';
+import { xhr } from '../dist';
 import { log } from './utils';
 
 declare global {
   interface Window {
-    createBeacon: typeof createBeacon;
+    xhr: typeof xhr;
   }
   namespace jest {
     interface Matchers<R> {
@@ -23,8 +23,7 @@ const script = {
   type: 'module',
   content: `
 ${fs.readFileSync(path.join(__dirname, '..', 'dist', 'bundle.esm.js'), 'utf8')}
-self.createBeacon = createBeacon;
-self.__DEBUG_BEACON_TRANSPORTER = true;
+self.xhr = xhr;
 `,
 };
 
@@ -57,9 +56,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       });
       await page.goto(server.url);
       await page.addScriptTag(script);
-      await page.waitForFunction(
-        () => typeof window.createBeacon !== 'undefined'
-      );
+      await page.waitForFunction(() => typeof window.xhr !== 'undefined');
     });
 
     afterEach(async () => {
@@ -74,13 +71,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         response.end('hello');
       });
       const result = await page.evaluate((url) => {
-        const originalFetch = window.fetch;
-        const originalPromise = window.Promise;
-        const { beacon } = window.createBeacon();
-        const response = beacon(`${url}/api`, 'hello');
-        window.fetch = originalFetch;
-        window.Promise = originalPromise;
-        return response;
+        return window.xhr(`${url}/api`, 'hello');
       }, server.url);
       expect(result).toBeUndefined;
       await waitForExpect(() => {
