@@ -46,9 +46,6 @@ export function xhr(
   }
 }
 
-const supportSendBeacon =
-  typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
-
 function createRequestInit({
   body,
   keepalive,
@@ -60,16 +57,15 @@ function createRequestInit({
   headers: Record<string, string>;
   compress: boolean;
 }): RequestInit {
-  const finalHeaders = new Headers(headers);
-  if (!finalHeaders.get('content-type')) {
-    finalHeaders.set('content-type', 'text/plain;charset=UTF-8');
+  if (!headers['content-type']) {
+    headers['content-type'] = 'text/plain;charset=UTF-8';
   }
 
   let finalBody: string | Uint8Array = body;
   if (compress && typeof TextEncoder !== 'undefined') {
     try {
       finalBody = gzipSync(new TextEncoder().encode(body));
-      finalHeaders.set('content-encoding', 'gzip');
+      headers['content-encoding'] = 'gzip';
     } catch (error) {
       // Do nothing if gzip fails
     }
@@ -79,7 +75,7 @@ function createRequestInit({
     body: finalBody,
     keepalive,
     credentials: 'include',
-    headers: finalHeaders,
+    headers,
     method: 'POST',
     mode: 'cors',
   };
@@ -115,6 +111,9 @@ function keepaliveFetch(
       );
   });
 }
+
+const supportSendBeacon =
+  typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
 
 function fallbackFetch(
   url: string,
@@ -160,7 +159,7 @@ function fallbackFetch(
 }
 
 /**
- * @internal
+ * @public
  */
 export const fetchFn = isKeepaliveFetchSupported()
   ? keepaliveFetch

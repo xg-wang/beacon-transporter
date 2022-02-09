@@ -5,7 +5,7 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type { createBeacon } from '../src/';
+import type { createBeacon } from '../dist/';
 import { log } from './utils';
 
 expect.extend({
@@ -28,6 +28,7 @@ expect.extend({
 declare global {
   interface Window {
     createBeacon: typeof createBeacon;
+    __DEBUG_BEACON_TRANSPORTER: boolean;
   }
   namespace jest {
     interface Matchers<R> {

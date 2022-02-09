@@ -42,6 +42,12 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  [RetryDBConfig](./beacon-transporter.retrydbconfig.md) |  |
 |  [RetryEntry](./beacon-transporter.retryentry.md) |  |
 
+## Variables
+
+|  Variable | Description |
+|  --- | --- |
+|  [fetchFn](./beacon-transporter.fetchfn.md) |  |
+
 ## Type Aliases
 
 |  Type Alias | Description |
