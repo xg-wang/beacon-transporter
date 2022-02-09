@@ -4,13 +4,14 @@ import path from 'path';
 import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 
-import type { createBeacon, createLocalStorageRetryDB } from '../src/';
+import type { createBeacon, createLocalStorageRetryDB } from '../dist/';
 import { log } from './utils';
 
 declare global {
   interface Window {
     createBeacon: typeof createBeacon;
     createLocalStorageRetryDB: typeof createLocalStorageRetryDB;
+    __DEBUG_BEACON_TRANSPORTER: boolean;
   }
 }
 

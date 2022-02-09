@@ -3,8 +3,5 @@
   "files.associations": {
     "api-extractor.json": "jsonc"
   },
-  "editor.formatOnSave": true,
-  "cSpell.words": [
-    "Retryable"
-  ]
+  "editor.formatOnSave": true
 }

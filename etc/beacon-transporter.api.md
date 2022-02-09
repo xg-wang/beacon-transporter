@@ -60,9 +60,8 @@ export interface DisableRetryDBConfig {
 }
 
 // Warning: (ae-forgotten-export) The symbol "fallbackFetch" needs to be exported by the entry point index.d.ts
-// Warning: (ae-internal-missing-underscore) The name "fetchFn" should be prefixed with an underscore because the declaration is marked as @internal
 //
-// @internal (undocumented)
+// @public (undocumented)
 export const fetchFn: typeof fallbackFetch;
 
 export { gzipSync }

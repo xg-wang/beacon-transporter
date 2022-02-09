@@ -5,12 +5,13 @@ import type { Browser, BrowserContext, BrowserType, Page } from 'playwright';
 import playwright from 'playwright';
 import waitForExpect from 'wait-for-expect';
 
-import type { createBeacon, RetryEntry } from '../src/';
+import type { createBeacon, RetryEntry } from '../dist';
 import { log } from './utils';
 
 declare global {
   interface Window {
     createBeacon: typeof createBeacon;
+    __DEBUG_BEACON_TRANSPORTER: boolean;
   }
 }
 
