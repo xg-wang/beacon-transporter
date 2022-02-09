@@ -1,12 +1,12 @@
 import { mutex } from 'webstorage-mutex';
 
-import { fetchFn } from './fetch';
 import type {
   IRetryDBBase,
   LocalStorageRetryDBConfig,
   QueueNotificationConfig,
   RetryEntry,
 } from './interfaces';
+import { fetchFn } from './network';
 import { createHeaders, logError, scheduleTask, throttle } from './utils';
 
 /**

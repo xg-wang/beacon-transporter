@@ -8,14 +8,14 @@ import {
   shift,
 } from 'idb-queue';
 
-import { fetchFn } from './fetch';
-import {
+import type {
   DisableRetryDBConfig,
   IRetryDB,
   QueueNotificationConfig,
   RetryDBConfig,
   RetryEntry,
 } from './interfaces';
+import { fetchFn } from './network';
 import {
   createHeaders,
   debug,
@@ -144,8 +144,7 @@ class Queue implements IQueue {
                   this.config.headerName
                 )}; attemptCount: ${attemptCount}`
             );
-            const fetch = fetchFn;
-            return fetch(
+            return fetchFn(
               url,
               body,
               createHeaders(

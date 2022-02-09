@@ -1,15 +1,15 @@
-import { BeaconInitWithCustomDB, IRetryDBBase } from '.';
-import { fetchFn, isGlobalFetchSupported } from './fetch';
 import type {
   BeaconConfig,
   BeaconFunc,
   BeaconInit,
+  BeaconInitWithCustomDB,
+  IRetryDBBase,
   RetryRejection,
   RetryRequestResponse,
 } from './interfaces';
+import { fetchFn, isGlobalFetchSupported } from './network';
 import { RetryDB } from './queue';
 import { createHeaders, debug, sleep } from './utils';
-import { xhr } from './xhr';
 
 /**
  * 502 Bad Gateway
@@ -207,8 +207,8 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
   }
 
   const beacon: BeaconFunc = (url, body, headers) => {
-    if (!isGlobalFetchSupported() || typeof Promise === 'undefined') {
-      return xhr(url, body, headers);
+    if (!isGlobalFetchSupported()) {
+      return Promise.resolve(undefined);
     }
     return new Beacon(url, body, beaconConfig, retryDB, compress).send(headers);
   };

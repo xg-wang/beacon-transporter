@@ -1,18 +1,19 @@
-/**
- * @public
- */
-export interface BeaconInit {
+interface BeaconInitBase {
   beaconConfig?: BeaconConfig;
-  retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
   compress?: boolean;
 }
 /**
  * @public
  */
-export interface BeaconInitWithCustomDB<CustomRetryDBType> {
-  beaconConfig?: BeaconConfig;
+export interface BeaconInit extends BeaconInitBase {
+  retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
+}
+/**
+ * @public
+ */
+export interface BeaconInitWithCustomDB<CustomRetryDBType>
+  extends BeaconInitBase {
   retryDB: CustomRetryDBType;
-  compress?: boolean;
 }
 
 /**
@@ -151,4 +152,4 @@ export type BeaconFunc = (
   url: string,
   body: string,
   headers?: Record<string, string>
-) => Promise<RetryRejection | RequestSuccess | undefined> | undefined;
+) => Promise<RetryRejection | RequestSuccess | undefined>;

@@ -8,14 +8,13 @@
 <b>Signature:</b>
 
 ```typescript
-export interface BeaconInitWithCustomDB<CustomRetryDBType> 
+export interface BeaconInitWithCustomDB<CustomRetryDBType> extends BeaconInitBase 
 ```
+<b>Extends:</b> BeaconInitBase
 
 ## Properties
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [beaconConfig?](./beacon-transporter.beaconinitwithcustomdb.beaconconfig.md) | [BeaconConfig](./beacon-transporter.beaconconfig.md) | <i>(Optional)</i> |
-|  [compress?](./beacon-transporter.beaconinitwithcustomdb.compress.md) | boolean | <i>(Optional)</i> |
 |  [retryDB](./beacon-transporter.beaconinitwithcustomdb.retrydb.md) | CustomRetryDBType |  |
 

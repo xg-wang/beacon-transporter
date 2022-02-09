@@ -8,14 +8,13 @@
 <b>Signature:</b>
 
 ```typescript
-export interface BeaconInit 
+export interface BeaconInit extends BeaconInitBase 
 ```
+<b>Extends:</b> BeaconInitBase
 
 ## Properties
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [beaconConfig?](./beacon-transporter.beaconinit.beaconconfig.md) | [BeaconConfig](./beacon-transporter.beaconconfig.md) | <i>(Optional)</i> |
-|  [compress?](./beacon-transporter.beaconinit.compress.md) | boolean | <i>(Optional)</i> |
 |  [retryDBConfig?](./beacon-transporter.beaconinit.retrydbconfig.md) | [RetryDBConfig](./beacon-transporter.retrydbconfig.md) \| [DisableRetryDBConfig](./beacon-transporter.disableretrydbconfig.md) | <i>(Optional)</i> |
 

@@ -1,16 +1,48 @@
 import { gzipSync } from 'fflate';
 
-import { RequestSuccess, RetryRejection } from './interfaces';
+import type { RequestSuccess, RetryRejection } from './interfaces';
 
+/**
+ * @public
+ */
 export function isGlobalFetchSupported(): boolean {
   return typeof window !== 'undefined' && typeof window.fetch === 'function';
 }
 
+/**
+ * @public
+ */
 export function isKeepaliveFetchSupported(): boolean {
   try {
     return isGlobalFetchSupported() && 'keepalive' in new Request('');
   } catch (_error) {
     return false;
+  }
+}
+
+/**
+ * @public
+ */
+export function xhr(
+  url: string,
+  body: string,
+  options: {
+    headers?: Record<string, string>;
+  } = {}
+): void {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.XMLHttpRequest !== 'undefined'
+  ) {
+    const req = new XMLHttpRequest();
+    req.open('POST', url, true);
+    req.withCredentials = true;
+    if (options.headers) {
+      for (const key of Object.keys(options.headers)) {
+        req.setRequestHeader(key, options.headers[key]);
+      }
+    }
+    req.send(body);
   }
 }
 
@@ -123,6 +155,9 @@ function fallbackFetch(
   });
 }
 
+/**
+ * @internal
+ */
 export const fetchFn = isKeepaliveFetchSupported()
   ? keepaliveFetch
   : fallbackFetch;
