@@ -48,11 +48,6 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: Beac
     database: CustomRetryDBType;
 };
 
-// Warning: (ae-incompatible-release-tags) The symbol "createLocalStorageRetryDB" is marked as @public, but its signature references "LocalStorageRetryDBConfig" which is marked as @beta
-//
-// @public (undocumented)
-export function createLocalStorageRetryDB({ keyName, maxNumber, throttleWait, headerName, attemptLimit, compressFetch, }: LocalStorageRetryDBConfig): LocalStorageRetryDB;
-
 // @public (undocumented)
 export interface DisableRetryDBConfig {
     // (undocumented)
@@ -93,14 +88,6 @@ export function isGlobalFetchSupported(): boolean;
 
 // @public (undocumented)
 export function isKeepaliveFetchSupported(): boolean;
-
-// @public (undocumented)
-export interface LocalStorageRetryDB extends IRetryDBBase {
-    // (undocumented)
-    clearQueue: () => void;
-    // (undocumented)
-    peekQueue: (count?: number) => RetryEntry[];
-}
 
 // @beta (undocumented)
 export interface LocalStorageRetryDBConfig {
