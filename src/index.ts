@@ -5,10 +5,6 @@
 
 export { createBeacon } from './beacon';
 export * from './interfaces';
-export {
-  createLocalStorageRetryDB,
-  LocalStorageRetryDB,
-} from './local-storage-retrydb';
 export * from './network';
 export { RetryDB } from './queue';
 export { gzipSync } from 'fflate';
