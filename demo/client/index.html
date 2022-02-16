@@ -15,15 +15,12 @@
   self.__DEBUG_BEACON_TRANSPORTER = true;
 
   const { beacon, database } = createBeacon({
-    beaconConfig: {
-      retry: {
-        limit: 3,
-        headerName: 'x-retry-context',
-        persist: true,
-      },
+    inMemoryRetry: {
+      attemptLimit: 3,
+      headerName: 'x-retry-context',
     },
-    retryDBConfig: {
-      dbName: 'test-database',
+    persistenceRetry: {
+      idbName: 'test-database',
       attemptLimit: 1,
       maxNumber: 10,
       batchEvictionNumber: 3,
