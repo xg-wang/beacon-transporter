@@ -4853,11 +4853,6 @@ webidl-conversions@^6.1.0:
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-6.1.0.tgz#9111b4d7ea80acd40f5270d666621afa78b69514"
   integrity sha512-qBIvFLGiBpLjfwmYAaHPXsn+ho5xZnGvyGvsarywGNc8VyQJUMHJ8OBKGGrPER0okBeMDaan4mNBlgBROxuI8w==
 
-webstorage-mutex@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/webstorage-mutex/-/webstorage-mutex-0.1.1.tgz#b8eadff10efbe1105ee9e2da781206ec30886cf5"
-  integrity sha512-iOTP4G1S/L6RgsjBoqm2oSkAoSx5ea7e8YGtpJYlP0Sm7Y1dIzWp7RGI/ZNlGmxVXwc4o/A+NqwMYdV2EgnJQQ==
-
 whatwg-encoding@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/whatwg-encoding/-/whatwg-encoding-1.0.5.tgz#5abacf777c32166a51d085d6b4f3e7d27113ddb0"

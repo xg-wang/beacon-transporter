@@ -42,8 +42,7 @@
   },
   "dependencies": {
     "fflate": "^0.7.3",
-    "idb-queue": "^0.1.6",
-    "webstorage-mutex": "^0.1.1"
+    "idb-queue": "^0.1.6"
   },
   "devDependencies": {
     "@microsoft/api-documenter": "^7.13.63",
