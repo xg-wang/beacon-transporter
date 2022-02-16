@@ -69,8 +69,8 @@ export function scheduleTask<T = void>(
   }
 }
 
-export interface ThrottleControl<Param> {
-  throttledFn: (param: Param) => void;
+export interface ThrottleControl {
+  throttledFn: () => void;
   resetThrottle: () => void;
 }
 
@@ -78,16 +78,16 @@ export interface ThrottleControl<Param> {
  * Create throttle control for executing function that is throttled,
  * and support resetting the throttling time
  */
-export function throttle<Param>(
-  fn: (param: Param) => void,
+export function throttle(
+  fn: () => void,
   timeFrame: number
-): ThrottleControl<Param> {
+): ThrottleControl {
   let lastTime = 0;
-  const throttledFn = (param: Param): void => {
+  const throttledFn = (): void => {
     const now = Date.now();
     if (now - lastTime > timeFrame) {
       debug(() => '[throttle] Run fn() at ' + String(now));
-      fn(param);
+      fn();
       lastTime = now;
     }
   };

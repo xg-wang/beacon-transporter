@@ -7,15 +7,8 @@
 <b>Signature:</b>
 
 ```typescript
-notifyQueue(config: QueueNotificationConfig): void;
+notifyQueue(): void;
 ```
-
-## Parameters
-
-|  Parameter | Type | Description |
-|  --- | --- | --- |
-|  config | [QueueNotificationConfig](./beacon-transporter.queuenotificationconfig.md) |  |
-
 <b>Returns:</b>
 
 void

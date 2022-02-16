@@ -74,7 +74,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       context = await browser.newContext({ ignoreHTTPSErrors: true });
       page = await context.newPage();
       server = await createTestServer();
-      server.get('/', (request, response) => {
+      server.get('/', (_request, response) => {
         response.end('hello!');
       });
       page.on('console', async (msg) => {
@@ -219,7 +219,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
     });
 
     it('if not firefox, retry configured times before giving up', async () => {
-      server.post('/api', (request, response) => {
+      server.post('/api', (_request, response) => {
         response.end('hello');
       });
       let numberOfRetries = 0;
@@ -230,8 +230,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url]) => {
           const { beacon } = window.createBeacon({
-            beaconConfig: {
-              retry: { limit: 2 },
+            inMemoryRetry: {
+              attemptLimit: 2,
             },
           });
           return beacon(`${url}/api`, 'hi');
@@ -262,19 +262,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         ([url]) => {
           window
             .createBeacon({
-              beaconConfig: {
-                retry: {
-                  limit: 2,
-                  inMemoryRetryStatusCodes: [502],
-                  headerName: 'x-retry-context',
-                },
+              inMemoryRetry: {
+                attemptLimit: 2,
+                statusCodes: [502],
+                headerName: 'x-retry-context',
               },
             })
             .beacon(`${url}/api/retry`, 'hi');
           window
             .createBeacon({
-              beaconConfig: {
-                retry: { limit: 2 },
+              inMemoryRetry: {
+                attemptLimit: 2,
               },
             })
             .beacon(`${url}/api/noretry`, 'hi');
@@ -302,20 +300,17 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
 
     it('can customize retry delay', async () => {
       const requests = [];
-      server.post('/api/retry', (request, response) => {
+      server.post('/api/retry', (_request, response) => {
         requests.push(Date.now());
         response.sendStatus(502);
       });
       await page.evaluate(
         ([url]) => {
           const { beacon } = window.createBeacon({
-            beaconConfig: {
-              retry: {
-                limit: 2,
-                inMemoryRetryStatusCodes: [502],
-                calculateRetryDelay: (countLeft) =>
-                  countLeft === 2 ? 1 : 2000,
-              },
+            inMemoryRetry: {
+              attemptLimit: 2,
+              statusCodes: [502],
+              calculateRetryDelay: (attemptCount) => (attemptCount === 1 ? 1 : 2000),
             },
           });
           beacon(`${url}/api/retry`, 'hi');
@@ -343,10 +338,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       await page.evaluate(
         ([url]) => {
           const { beacon } = window.createBeacon({
-            beaconConfig: {
-              retry: {
-                limit: 0,
-              },
+            inMemoryRetry: {
+              attemptLimit: 0
             },
             compress: true,
           });

@@ -9,13 +9,13 @@ Constructs a new instance of the `RetryDB` class
 <b>Signature:</b>
 
 ```typescript
-constructor(config: RetryDBConfig | DisableRetryDBConfig, compress?: boolean);
+constructor(config: RequiredPersistenceRetryConfig, extraConfig: Pick<BeaconInit, 'compress' | 'disablePersistenceRetry'>);
 ```
 
 ## Parameters
 
 |  Parameter | Type | Description |
 |  --- | --- | --- |
-|  config | [RetryDBConfig](./beacon-transporter.retrydbconfig.md) \| [DisableRetryDBConfig](./beacon-transporter.disableretrydbconfig.md) |  |
-|  compress | boolean |  |
+|  config | RequiredPersistenceRetryConfig |  |
+|  extraConfig | Pick&lt;[BeaconInit](./beacon-transporter.beaconinit.md)<!-- -->, 'compress' \| 'disablePersistenceRetry'&gt; |  |
 

@@ -15,7 +15,7 @@ export interface IRetryDBBase
 
 |  Method | Description |
 |  --- | --- |
-|  [notifyQueue(config)](./beacon-transporter.iretrydbbase.notifyqueue.md) |  |
+|  [notifyQueue()](./beacon-transporter.iretrydbbase.notifyqueue.md) |  |
 |  [onClear(cb)](./beacon-transporter.iretrydbbase.onclear.md) |  |
 |  [pushToQueue(entry)](./beacon-transporter.iretrydbbase.pushtoqueue.md) |  |
 |  [removeOnClear(cb)](./beacon-transporter.iretrydbbase.removeonclear.md) |  |

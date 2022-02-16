@@ -8,7 +8,7 @@
 <b>Signature:</b>
 
 ```typescript
-export declare function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: BeaconInitWithCustomDB<CustomRetryDBType>): {
+export declare function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: BeaconInit<CustomRetryDBType>): {
     beacon: BeaconFunc;
     database: CustomRetryDBType;
 };
@@ -18,7 +18,7 @@ export declare function createBeacon<CustomRetryDBType extends IRetryDBBase>(ini
 
 |  Parameter | Type | Description |
 |  --- | --- | --- |
-|  init | [BeaconInitWithCustomDB](./beacon-transporter.beaconinitwithcustomdb.md)<!-- -->&lt;CustomRetryDBType&gt; |  |
+|  init | [BeaconInit](./beacon-transporter.beaconinit.md)<!-- -->&lt;CustomRetryDBType&gt; |  |
 
 <b>Returns:</b>
 

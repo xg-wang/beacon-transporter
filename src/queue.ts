@@ -9,10 +9,9 @@ import {
 } from 'idb-queue';
 
 import type {
-  DisableRetryDBConfig,
+  BeaconInit,
   IRetryDB,
-  QueueNotificationConfig,
-  RetryDBConfig,
+  RequiredPersistenceRetryConfig,
   RetryEntry,
 } from './interfaces';
 import { fetchFn } from './network';
@@ -26,7 +25,7 @@ import {
 } from './utils';
 
 interface IQueue {
-  onNotify(config: QueueNotificationConfig): void;
+  onNotify(): void;
   push(entry: RetryEntry): void;
   clear(): Promise<void>;
   peek(count: number): Promise<RetryEntry[]>;
@@ -34,29 +33,32 @@ interface IQueue {
 }
 
 class Queue implements IQueue {
-  private throttleControl: ThrottleControl<QueueNotificationConfig>;
+  private throttleControl: ThrottleControl;
   private withStore: WithStore;
   private disablePersistence = false;
 
-  constructor(private config: RetryDBConfig, private compress = false) {
-    const measureCreate = config.measureIDB?.create;
-    if (measureCreate) {
-      performance.mark(measureCreate.createStartMark);
+  constructor(
+    private config: RequiredPersistenceRetryConfig,
+    private compress = false
+  ) {
+    const measureMarks = config.measureIDB;
+    if (measureMarks) {
+      performance.mark(measureMarks.createStartMark);
     }
-    this.withStore = createStore(config.dbName, 'beacons', 'timestamp', {
+    this.withStore = createStore(config.idbName, 'beacons', 'timestamp', {
       onSuccess: () => {
-        if (measureCreate) {
+        if (measureMarks) {
           performance.measure(
-            measureCreate.createSuccessMeasure,
-            measureCreate.createStartMark
+            measureMarks.createSuccessMeasure,
+            measureMarks.createStartMark
           );
         }
       },
       onError: () => {
-        if (measureCreate) {
+        if (measureMarks) {
           performance.measure(
-            measureCreate.createFailMeasure,
-            measureCreate.createStartMark
+            measureMarks.createFailMeasure,
+            measureMarks.createStartMark
           );
         }
         this.disablePersistence = true;
@@ -68,11 +70,11 @@ class Queue implements IQueue {
     );
   }
 
-  public onNotify(config: QueueNotificationConfig): void {
+  public onNotify(): void {
     if (this.disablePersistence) {
       return;
     }
-    this.throttleControl.throttledFn(config);
+    this.throttleControl.throttledFn();
   }
 
   public push(entry: RetryEntry): void {
@@ -91,8 +93,7 @@ class Queue implements IQueue {
           logError(() => 'push failed');
         });
     };
-    const shouldUseIdle = this.config.useIdle?.() ?? false;
-    shouldUseIdle ? scheduleTask(runPushTask) : runPushTask();
+    this.config.useIdle ? scheduleTask(runPushTask) : runPushTask();
   }
 
   public clear(): Promise<void> {
@@ -127,7 +128,7 @@ class Queue implements IQueue {
     });
   }
 
-  private replayEntries(config: QueueNotificationConfig): void {
+  private replayEntries(): void {
     if (this.disablePersistence) {
       return;
     }
@@ -156,7 +157,7 @@ class Queue implements IQueue {
               this.compress
             ).then((maybeError) => {
               if (!maybeError || maybeError.type === 'success') {
-                this.replayEntries(config);
+                this.replayEntries();
               } else {
                 if (attemptCount + 1 > this.config.attemptLimit) {
                   debug(
@@ -176,9 +177,7 @@ class Queue implements IQueue {
                 }
                 if (
                   maybeError.type === 'network' ||
-                  config.allowedPersistRetryStatusCodes.includes(
-                    maybeError.statusCode
-                  )
+                  this.config.statusCodes.includes(maybeError.statusCode)
                 ) {
                   debug(
                     () =>
@@ -216,8 +215,9 @@ class Queue implements IQueue {
           }
         });
     };
-    const shouldUseIdle = this.config.useIdle?.() ?? false;
-    shouldUseIdle ? scheduleTask(runReplayEntriesTask) : runReplayEntriesTask();
+    this.config.useIdle
+      ? scheduleTask(runReplayEntriesTask)
+      : runReplayEntriesTask();
   }
 }
 
@@ -249,10 +249,13 @@ export class RetryDB implements IRetryDB {
   private queue: IQueue;
   private beaconListeners = new Set<() => void>();
 
-  constructor(config: RetryDBConfig | DisableRetryDBConfig, compress = false) {
+  constructor(
+    config: RequiredPersistenceRetryConfig,
+    extraConfig: Pick<BeaconInit, 'compress' | 'disablePersistenceRetry'>
+  ) {
     this.queue =
-      RetryDB.hasSupport && !config.disabled
-        ? new Queue(config, compress)
+      RetryDB.hasSupport && !extraConfig.disablePersistenceRetry
+        ? new Queue(config, extraConfig.compress)
         : new NoopQueue();
   }
 
@@ -260,8 +263,8 @@ export class RetryDB implements IRetryDB {
     this.queue.push(entry);
   }
 
-  notifyQueue(config: QueueNotificationConfig): void {
-    this.queue.onNotify(config);
+  notifyQueue(): void {
+    this.queue.onNotify();
   }
 
   clearQueue(): Promise<void> {

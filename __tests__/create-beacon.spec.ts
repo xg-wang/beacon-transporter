@@ -1,5 +1,5 @@
-import { createBeacon, createLocalStorageRetryDB } from '../dist/bundle.cjs';
-import type { IRetryDBBase, LocalStorageRetryDB } from '../dist/index.d';
+import { createBeacon } from '../dist/bundle.cjs';
+import type { IRetryDBBase } from '../dist/index.d';
 
 describe('createBeacon', () => {
   it('Can run noop when called in node', () => {
@@ -55,21 +55,5 @@ describe('createBeacon', () => {
     expect(_onClearCalled).toBe(true);
     expect(_removeOnClearCalled).toBe(true);
     expect(_customMethodCalled).toBe(true);
-  });
-
-  it('can pass in localStorageRetryDB', () => {
-    expect(() => {
-      const localStorageDB = createLocalStorageRetryDB({
-        keyName: 'beacon-transporter-storage',
-        throttleWait: 5 * 60 * 1000,
-        maxNumber: 3,
-        headerName: 'x-retry-context',
-        attemptLimit: 3,
-        compressFetch: true,
-      });
-      createBeacon<LocalStorageRetryDB>({
-        retryDB: localStorageDB,
-      }).beacon('/api', 'hello');
-    }).not.toThrow();
   });
 });

@@ -1,9 +1,9 @@
 import type {
-  BeaconConfig,
   BeaconFunc,
   BeaconInit,
-  BeaconInitWithCustomDB,
   IRetryDBBase,
+  RequiredInMemoryRetryConfig,
+  RequiredPersistenceRetryConfig,
   RetryRejection,
   RetryRequestResponse,
 } from './interfaces';
@@ -24,32 +24,26 @@ const defaultPersistRetryStatusCodes = [429, 503];
 
 class Beacon<RetryDBType extends IRetryDBBase> {
   private timestamp: number;
-  private persistRetryStatusCodes: number[];
-  private inMemoryRetryStatusCodes: number[];
   private isClearQueuePending = false;
   private onClearCallback: () => void;
-  private calculateRetryDelay: (retryCountLeft: number) => number;
 
   constructor(
     private url: string,
     private body: string,
-    private config: BeaconConfig,
-    private db: RetryDBType,
+    private config: RequiredInMemoryRetryConfig,
+    private persistenceConfig: {
+      db: RetryDBType;
+      disabled: boolean;
+      statusCodes: number[];
+    },
     private compress: boolean = false
   ) {
     this.timestamp = Date.now();
-    this.persistRetryStatusCodes =
-      config.retry.persistRetryStatusCodes || defaultPersistRetryStatusCodes;
-    this.inMemoryRetryStatusCodes =
-      config.retry.inMemoryRetryStatusCodes || defaultInMemoryRetryStatusCodes;
     this.onClearCallback = () => (this.isClearQueuePending = true);
-    this.calculateRetryDelay =
-      config.retry.calculateRetryDelay ??
-      ((retryCountLeft) => this.getAttemptCount(retryCountLeft) * 2000);
   }
 
   send(headers: Record<string, string> = {}): Promise<RetryRequestResponse> {
-    this.db.onClear(this.onClearCallback);
+    this.persistenceConfig.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
       (fetchHeaders: Record<string, string>) =>
@@ -58,12 +52,12 @@ class Beacon<RetryDBType extends IRetryDBBase> {
       headers
     ).finally(() => {
       debug(() => 'beacon finished');
-      this.db.removeOnClear(this.onClearCallback);
+      this.persistenceConfig.db.removeOnClear(this.onClearCallback);
     });
   }
 
   private get retryLimit(): number {
-    return this.config.retry.limit;
+    return this.config.attemptLimit;
   }
 
   private getAttemptCount(retryCountLeft: number): number {
@@ -84,23 +78,16 @@ class Beacon<RetryDBType extends IRetryDBBase> {
   ): Promise<RetryRequestResponse> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
-      createHeaders(
-        headers,
-        this.config.retry.headerName,
-        attemptCount,
-        errorCode
-      )
+      createHeaders(headers, this.config.headerName, attemptCount, errorCode)
     ).then((maybeError) => {
       if (typeof maybeError === 'undefined' || maybeError.type === 'success') {
-        if (!this.isClearQueuePending && this.config.retry.persist) {
-          this.db.notifyQueue({
-            allowedPersistRetryStatusCodes: this.persistRetryStatusCodes,
-          });
+        if (!this.isClearQueuePending && !this.persistenceConfig.disabled) {
+          this.persistenceConfig.db.notifyQueue();
         }
       } else {
         debug(() => 'retry rejected ' + JSON.stringify(maybeError));
         if (this.shouldPersist(retryCountLeft, maybeError)) {
-          this.db.pushToQueue({
+          this.persistenceConfig.db.pushToQueue({
             url: this.url,
             body: this.body,
             headers,
@@ -109,7 +96,10 @@ class Beacon<RetryDBType extends IRetryDBBase> {
             attemptCount: this.getAttemptCount(retryCountLeft),
           });
         } else if (retryCountLeft > 0 && this.isRetryableError(maybeError)) {
-          const waitMs = this.calculateRetryDelay(retryCountLeft);
+          const waitMs = this.config.calculateRetryDelay(
+            this.getAttemptCount(retryCountLeft),
+            retryCountLeft
+          );
           debug(() => `in memory retry in ${waitMs}ms`);
           return sleep(waitMs).then(() =>
             this.retry(fn, retryCountLeft - 1, headers, maybeError.statusCode)
@@ -123,7 +113,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
   private isRetryableError(error: RetryRejection): boolean {
     if (
       error.type === 'network' ||
-      this.inMemoryRetryStatusCodes.includes(error.statusCode)
+      this.config.statusCodes.includes(error.statusCode)
     ) {
       return true;
     }
@@ -134,7 +124,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     retryCountLeft: number,
     error: RetryRejection
   ): boolean {
-    if (this.isClearQueuePending || !this.config.retry.persist) {
+    if (this.isClearQueuePending || this.persistenceConfig.disabled) {
       return false;
     }
     // Short-circuit if apparently offline or all back-off retries fail
@@ -146,7 +136,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     }
     const fromStatusCode =
       error.type === 'response' &&
-      this.persistRetryStatusCodes.includes(error.statusCode);
+      this.persistenceConfig.statusCodes.includes(error.statusCode);
     if (fromStatusCode) {
       return true;
     }
@@ -165,7 +155,7 @@ export function createBeacon(init?: BeaconInit): {
  * @public
  */
 export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
-  init?: BeaconInitWithCustomDB<CustomRetryDBType>
+  init?: BeaconInit<CustomRetryDBType>
 ): {
   beacon: BeaconFunc;
   database: CustomRetryDBType;
@@ -173,44 +163,60 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
 /**
  * @public
  */
-export function createBeacon<CustomRetryDBType extends IRetryDBBase>(
-  init: BeaconInit | BeaconInitWithCustomDB<CustomRetryDBType> = {}
+export function createBeacon<CustomRetryDB extends IRetryDBBase = IRetryDBBase>(
+  init: BeaconInit<CustomRetryDB> = {}
 ): {
   beacon: BeaconFunc;
-  database: CustomRetryDBType | RetryDB;
+  database: RetryDB | CustomRetryDB;
 } {
-  const beaconConfig = init.beaconConfig || {
-    retry: {
-      limit: 0,
+  const compress = Boolean(init.compress);
+  const inMemoryRetryConfig: RequiredInMemoryRetryConfig = Object.assign(
+    {
+      attemptLimit: 0,
+      statusCodes: defaultInMemoryRetryStatusCodes,
+      calculateRetryDelay: (_retryCountLeft: number, attemptCount: number) => attemptCount * 2000,
     },
-  };
-  const compress = init.compress || false;
-  let retryDB: CustomRetryDBType | RetryDB;
-  if ('retryDB' in init) {
+    init.inMemoryRetry
+  );
+  let retryDB: CustomRetryDB | RetryDB;
+  if (init.retryDB) {
     retryDB = init.retryDB;
   } else {
-    const retryDBConfig = init.retryDBConfig || {
-      dbName: 'beacon-transporter',
-      attemptLimit: 3,
-      maxNumber: 1000,
-      batchEvictionNumber: 300,
-      throttleWait: 5 * 60 * 1000,
-    };
-    if (
-      !retryDBConfig.disabled &&
-      !retryDBConfig.headerName &&
-      beaconConfig.retry.headerName
-    ) {
-      retryDBConfig.headerName = beaconConfig.retry.headerName;
-    }
-    retryDB = new RetryDB(retryDBConfig, compress);
+    const retryDBConfig: RequiredPersistenceRetryConfig = Object.assign(
+      {
+        idbName: 'beacon-transporter',
+        attemptLimit: 3,
+        statusCodes: defaultPersistRetryStatusCodes,
+        maxNumber: 1000,
+        batchEvictionNumber: 300,
+        throttleWait: 5 * 60 * 1000,
+      },
+      init.persistenceRetry
+    );
+    retryDBConfig.headerName =
+      retryDBConfig.headerName || inMemoryRetryConfig.headerName;
+    retryDB = new RetryDB(retryDBConfig, {
+      compress: init.compress,
+      disablePersistenceRetry: init.disablePersistenceRetry,
+    });
   }
 
   const beacon: BeaconFunc = (url, body, headers) => {
     if (!isGlobalFetchSupported()) {
       return Promise.resolve(undefined);
     }
-    return new Beacon(url, body, beaconConfig, retryDB, compress).send(headers);
+    return new Beacon(
+      url,
+      body,
+      inMemoryRetryConfig,
+      {
+        db: retryDB,
+        disabled: Boolean(init.disablePersistenceRetry),
+        statusCodes:
+          init.persistenceRetry?.statusCodes || defaultPersistRetryStatusCodes,
+      },
+      compress
+    ).send(headers);
   };
   return { beacon, database: retryDB };
 }

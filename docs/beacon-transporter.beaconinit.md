@@ -8,13 +8,16 @@
 <b>Signature:</b>
 
 ```typescript
-export interface BeaconInit extends BeaconInitBase 
+export interface BeaconInit<CustomRetryDB = IRetryDBBase> 
 ```
-<b>Extends:</b> BeaconInitBase
 
 ## Properties
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [retryDBConfig?](./beacon-transporter.beaconinit.retrydbconfig.md) | [RetryDBConfig](./beacon-transporter.retrydbconfig.md) \| [DisableRetryDBConfig](./beacon-transporter.disableretrydbconfig.md) | <i>(Optional)</i> |
+|  [compress?](./beacon-transporter.beaconinit.compress.md) | boolean | <i>(Optional)</i> |
+|  [disablePersistenceRetry?](./beacon-transporter.beaconinit.disablepersistenceretry.md) | boolean | <i>(Optional)</i> |
+|  [inMemoryRetry?](./beacon-transporter.beaconinit.inmemoryretry.md) | { attemptLimit?: number; statusCodes?: number\[\]; headerName?: string; calculateRetryDelay?: (attempCount: number, countLeft: number) =&gt; number; } | <i>(Optional)</i> |
+|  [persistenceRetry?](./beacon-transporter.beaconinit.persistenceretry.md) | { idbName?: string; attemptLimit?: number; statusCodes?: number\[\]; maxNumber?: number; batchEvictionNumber?: number; throttleWait?: number; headerName?: string; useIdle?: boolean; measureIDB?: { createStartMark: string; createSuccessMeasure: string; createFailMeasure: string; }; } | <i>(Optional)</i> |
+|  [retryDB?](./beacon-transporter.beaconinit.retrydb.md) | CustomRetryDB | <i>(Optional)</i> |
 
