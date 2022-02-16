@@ -7,33 +7,39 @@
 import { gzipSync } from 'fflate';
 
 // @public (undocumented)
-export interface BeaconConfig {
-    // (undocumented)
-    retry: {
-        limit: number;
-        headerName?: string;
-        inMemoryRetryStatusCodes?: number[];
-        persist?: boolean;
-        persistRetryStatusCodes?: number[];
-        calculateRetryDelay?: (countLeft: number) => number;
-    };
-}
-
-// @public (undocumented)
 export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
 
-// Warning: (ae-forgotten-export) The symbol "BeaconInitBase" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
-export interface BeaconInit extends BeaconInitBase {
+export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
     // (undocumented)
-    retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
-}
-
-// @public (undocumented)
-export interface BeaconInitWithCustomDB<CustomRetryDBType> extends BeaconInitBase {
+    compress?: boolean;
     // (undocumented)
-    retryDB: CustomRetryDBType;
+    disablePersistenceRetry?: boolean;
+    // (undocumented)
+    inMemoryRetry?: {
+        attemptLimit?: number;
+        statusCodes?: number[];
+        headerName?: string;
+        calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
+    };
+    // (undocumented)
+    persistenceRetry?: {
+        idbName?: string;
+        attemptLimit?: number;
+        statusCodes?: number[];
+        maxNumber?: number;
+        batchEvictionNumber?: number;
+        throttleWait?: number;
+        headerName?: string;
+        useIdle?: boolean;
+        measureIDB?: {
+            createStartMark: string;
+            createSuccessMeasure: string;
+            createFailMeasure: string;
+        };
+    };
+    // (undocumented)
+    retryDB?: CustomRetryDB;
 }
 
 // @public (undocumented)
@@ -43,16 +49,10 @@ export function createBeacon(init?: BeaconInit): {
 };
 
 // @public (undocumented)
-export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: BeaconInitWithCustomDB<CustomRetryDBType>): {
+export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: BeaconInit<CustomRetryDBType>): {
     beacon: BeaconFunc;
     database: CustomRetryDBType;
 };
-
-// @public (undocumented)
-export interface DisableRetryDBConfig {
-    // (undocumented)
-    disabled: true;
-}
 
 // Warning: (ae-forgotten-export) The symbol "fallbackFetch" needs to be exported by the entry point index.d.ts
 //
@@ -74,7 +74,7 @@ export interface IRetryDB extends IRetryDBBase {
 // @public (undocumented)
 export interface IRetryDBBase {
     // (undocumented)
-    notifyQueue(config: QueueNotificationConfig): void;
+    notifyQueue(): void;
     // (undocumented)
     onClear(cb: () => void): void;
     // (undocumented)
@@ -89,22 +89,6 @@ export function isGlobalFetchSupported(): boolean;
 // @public (undocumented)
 export function isKeepaliveFetchSupported(): boolean;
 
-// @beta (undocumented)
-export interface LocalStorageRetryDBConfig {
-    // (undocumented)
-    attemptLimit: number;
-    // (undocumented)
-    compressFetch: boolean;
-    // (undocumented)
-    headerName?: string;
-    // (undocumented)
-    keyName: string;
-    // (undocumented)
-    maxNumber: number;
-    // (undocumented)
-    throttleWait: number;
-}
-
 // @public (undocumented)
 export interface NetworkRetryRejection {
     // (undocumented)
@@ -114,18 +98,22 @@ export interface NetworkRetryRejection {
 }
 
 // @public (undocumented)
-export interface QueueNotificationConfig {
-    // (undocumented)
-    allowedPersistRetryStatusCodes: number[];
-}
-
-// @public (undocumented)
 export interface RequestSuccess {
     // (undocumented)
     statusCode: 200;
     // (undocumented)
     type: 'success';
 }
+
+// Warning: (ae-internal-missing-underscore) The name "RequiredInMemoryRetryConfig" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type RequiredInMemoryRetryConfig = Required<Pick<NonNullable<BeaconInit['inMemoryRetry']>, 'statusCodes' | 'attemptLimit' | 'calculateRetryDelay'>> & NonNullable<BeaconInit['inMemoryRetry']>;
+
+// Warning: (ae-internal-missing-underscore) The name "RequiredPersistenceRetryConfig" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type RequiredPersistenceRetryConfig = Required<Pick<NonNullable<BeaconInit['persistenceRetry']>, 'idbName' | 'attemptLimit' | 'statusCodes' | 'maxNumber' | 'batchEvictionNumber' | 'throttleWait'>> & NonNullable<BeaconInit['persistenceRetry']>;
 
 // @public (undocumented)
 export interface ResponseRetryRejection {
@@ -137,13 +125,14 @@ export interface ResponseRetryRejection {
 
 // @public (undocumented)
 export class RetryDB implements IRetryDB {
-    constructor(config: RetryDBConfig | DisableRetryDBConfig, compress?: boolean);
+    // Warning: (ae-incompatible-release-tags) The symbol "__constructor" is marked as @public, but its signature references "RequiredPersistenceRetryConfig" which is marked as @internal
+    constructor(config: RequiredPersistenceRetryConfig, extraConfig: Pick<BeaconInit, 'compress' | 'disablePersistenceRetry'>);
     // (undocumented)
     clearQueue(): Promise<void>;
     // (undocumented)
     static hasSupport: boolean;
     // (undocumented)
-    notifyQueue(config: QueueNotificationConfig): void;
+    notifyQueue(): void;
     // (undocumented)
     onClear(cb: () => void): void;
     // (undocumented)
@@ -154,34 +143,6 @@ export class RetryDB implements IRetryDB {
     pushToQueue(entry: RetryEntry): void;
     // (undocumented)
     removeOnClear(cb: () => void): void;
-}
-
-// @public (undocumented)
-export interface RetryDBConfig {
-    // (undocumented)
-    attemptLimit: number;
-    // (undocumented)
-    batchEvictionNumber: number;
-    // (undocumented)
-    dbName: string;
-    // (undocumented)
-    disabled?: false;
-    // (undocumented)
-    headerName?: string;
-    // (undocumented)
-    maxNumber: number;
-    // (undocumented)
-    measureIDB?: {
-        create?: {
-            createStartMark: string;
-            createSuccessMeasure: string;
-            createFailMeasure: string;
-        };
-    };
-    // (undocumented)
-    throttleWait: number;
-    // (undocumented)
-    useIdle?: () => boolean;
 }
 
 // @public (undocumented)

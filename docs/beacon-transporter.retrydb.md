@@ -16,7 +16,7 @@ export declare class RetryDB implements IRetryDB
 
 |  Constructor | Modifiers | Description |
 |  --- | --- | --- |
-|  [(constructor)(config, compress)](./beacon-transporter.retrydb._constructor_.md) |  | Constructs a new instance of the <code>RetryDB</code> class |
+|  [(constructor)(config, extraConfig)](./beacon-transporter.retrydb._constructor_.md) |  | Constructs a new instance of the <code>RetryDB</code> class |
 
 ## Properties
 
@@ -29,7 +29,7 @@ export declare class RetryDB implements IRetryDB
 |  Method | Modifiers | Description |
 |  --- | --- | --- |
 |  [clearQueue()](./beacon-transporter.retrydb.clearqueue.md) |  |  |
-|  [notifyQueue(config)](./beacon-transporter.retrydb.notifyqueue.md) |  |  |
+|  [notifyQueue()](./beacon-transporter.retrydb.notifyqueue.md) |  |  |
 |  [onClear(cb)](./beacon-transporter.retrydb.onclear.md) |  |  |
 |  [peekBackQueue(count)](./beacon-transporter.retrydb.peekbackqueue.md) |  |  |
 |  [peekQueue(count)](./beacon-transporter.retrydb.peekqueue.md) |  |  |

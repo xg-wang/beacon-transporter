@@ -1,20 +1,59 @@
-interface BeaconInitBase {
-  beaconConfig?: BeaconConfig;
+/**
+ * @public
+ */
+export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
   compress?: boolean;
+  inMemoryRetry?: {
+    attemptLimit?: number;
+    statusCodes?: number[];
+    headerName?: string;
+    calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
+  };
+  disablePersistenceRetry?: boolean;
+  persistenceRetry?: {
+    idbName?: string;
+    attemptLimit?: number;
+    statusCodes?: number[];
+    maxNumber?: number;
+    batchEvictionNumber?: number;
+    throttleWait?: number;
+    headerName?: string;
+    useIdle?: boolean;
+    measureIDB?: {
+      createStartMark: string;
+      createSuccessMeasure: string;
+      createFailMeasure: string;
+    };
+  };
+  retryDB?: CustomRetryDB;
 }
+
 /**
- * @public
+ * @internal
  */
-export interface BeaconInit extends BeaconInitBase {
-  retryDBConfig?: RetryDBConfig | DisableRetryDBConfig;
-}
+export type RequiredInMemoryRetryConfig = Required<
+  Pick<
+    NonNullable<BeaconInit['inMemoryRetry']>,
+    'statusCodes' | 'attemptLimit' | 'calculateRetryDelay'
+  >
+> &
+  NonNullable<BeaconInit['inMemoryRetry']>;
+
 /**
- * @public
+ * @internal
  */
-export interface BeaconInitWithCustomDB<CustomRetryDBType>
-  extends BeaconInitBase {
-  retryDB: CustomRetryDBType;
-}
+export type RequiredPersistenceRetryConfig = Required<
+  Pick<
+    NonNullable<BeaconInit['persistenceRetry']>,
+    | 'idbName'
+    | 'attemptLimit'
+    | 'statusCodes'
+    | 'maxNumber'
+    | 'batchEvictionNumber'
+    | 'throttleWait'
+  >
+> &
+  NonNullable<BeaconInit['persistenceRetry']>;
 
 /**
  * @public
@@ -33,7 +72,7 @@ export interface RetryEntry {
  */
 export interface IRetryDBBase {
   pushToQueue(entry: RetryEntry): void;
-  notifyQueue(config: QueueNotificationConfig): void;
+  notifyQueue(): void;
   onClear(cb: () => void): void;
   removeOnClear(cb: () => void): void;
 }
@@ -45,70 +84,6 @@ export interface IRetryDB extends IRetryDBBase {
   clearQueue(): Promise<void>;
   peekQueue(count: number): Promise<RetryEntry[]>;
   peekBackQueue(count: number): Promise<RetryEntry[]>;
-}
-
-/**
- * @public
- */
-export interface QueueNotificationConfig {
-  allowedPersistRetryStatusCodes: number[];
-}
-
-/**
- * @public
- */
-export interface RetryDBConfig {
-  disabled?: false;
-  dbName: string;
-  headerName?: string;
-  attemptLimit: number;
-  maxNumber: number;
-  batchEvictionNumber: number;
-  throttleWait: number;
-  useIdle?: () => boolean;
-  measureIDB?: {
-    create?: {
-      createStartMark: string;
-      createSuccessMeasure: string;
-      createFailMeasure: string;
-    };
-  };
-}
-
-/**
- * @public
- */
-export interface DisableRetryDBConfig {
-  disabled: true;
-}
-
-/**
- * @beta
- */
-export interface LocalStorageRetryDBConfig {
-  keyName: string;
-  maxNumber: number;
-  headerName?: string;
-  attemptLimit: number;
-  throttleWait: number;
-  compressFetch: boolean;
-}
-
-/**
- * @public
- */
-export interface BeaconConfig {
-  retry: {
-    limit: number;
-    /**
-     * HTTP header name for the header that contains retry context
-     */
-    headerName?: string;
-    inMemoryRetryStatusCodes?: number[];
-    persist?: boolean;
-    persistRetryStatusCodes?: number[];
-    calculateRetryDelay?: (countLeft: number) => number;
-  };
 }
 
 /**

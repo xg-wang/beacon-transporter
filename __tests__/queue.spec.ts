@@ -61,7 +61,7 @@ describe.each([
     context = await browser.newContext({ ignoreHTTPSErrors: true });
     page = await context.newPage();
     server = await createTestServer();
-    server.get('/', (request, response) => {
+    server.get('/', (_request, response) => {
       response.end('hello!');
     });
     page.on('console', async (msg) => {
@@ -102,8 +102,9 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: { limit: 2, persist: true, headerName: 'x-retry-context' },
+          inMemoryRetry: {
+            attemptLimit: 2,
+            headerName: 'x-retry-context',
           },
         });
         beacon(`${url}/api/200`, bodyPayload);
@@ -146,16 +147,17 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: { limit: 2, persist: true, headerName: 'x-retry-context' },
+          inMemoryRetry: {
+            attemptLimit: 2,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'beacon-transporter',
+          persistenceRetry: {
+            idbName: 'beacon-transporter',
             attemptLimit: 3,
             maxNumber: 1000,
             batchEvictionNumber: 300,
             throttleWait: 5 * 60 * 1000,
-            useIdle: () => true,
+            useIdle: true,
           },
         });
         beacon(`${url}/api/200`, bodyPayload);
@@ -173,7 +175,7 @@ describe.each([
     expect(results[1].header).toEqual(JSON.stringify({ attempt: 3 }));
   });
 
-  it('retry with reading IDB skipped if retry.persist=false', async () => {
+  it('retry with reading IDB skipped if disablePersistenceRetry=true', async () => {
     const results = [];
     server.post('/api/:status', ({ params, headers }, res) => {
       const status = +params.status;
@@ -185,16 +187,11 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: { limit: 0, persist: false, headerName: 'x-retry-context' },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
-            attemptLimit: 2,
-            maxNumber: 10,
-            batchEvictionNumber: 3,
-            throttleWait: 2000,
-          },
+          disablePersistenceRetry: true,
         });
         beacon(`${url}/api/429`, bodyPayload);
         setTimeout(() => {
@@ -226,15 +223,16 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: { limit: 0, persist: true, headerName: 'x-retry-context' },
-          },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
             throttleWait: 2000,
+          },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
         });
 
@@ -289,16 +287,13 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 1,
-              persist: true,
-              inMemoryRetryStatusCodes: [888],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 1,
+            statusCodes: [888],
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            idbName: 'test-database',
             attemptLimit: 1,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -336,16 +331,13 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon, database } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 1,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 1,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            idbName: 'test-database',
+            statusCodes: [999],
             attemptLimit: 1,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -382,17 +374,14 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            idbName: 'test-database',
             attemptLimit: 2,
+            statusCodes: [999],
             maxNumber: 10,
             batchEvictionNumber: 3,
             throttleWait: 200,
@@ -446,17 +435,14 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              inMemoryRetryStatusCodes: [888],
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            statusCodes: [888],
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            statusCodes: [999],
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -497,16 +483,13 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            statusCodes: [999],
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -530,16 +513,13 @@ describe.each([
     await page2.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            statusCodes: [999],
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -569,8 +549,11 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon, database } = window.createBeacon({
-          beaconConfig: {
-            retry: { limit: 0, persistRetryStatusCodes: [999], persist: true },
+          inMemoryRetry: {
+            attemptLimit: 0,
+          },
+          persistenceRetry: {
+            statusCodes: [999],
           },
         });
         // @ts-ignore
@@ -622,16 +605,13 @@ describe.each([
     await page.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            statusCodes: [999],
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -656,16 +636,13 @@ describe.each([
     await page2.evaluate(
       ([url, bodyPayload]) => {
         const { beacon } = window.createBeacon({
-          beaconConfig: {
-            retry: {
-              limit: 0,
-              persist: true,
-              persistRetryStatusCodes: [999],
-              headerName: 'x-retry-context',
-            },
+          inMemoryRetry: {
+            attemptLimit: 0,
+            headerName: 'x-retry-context',
           },
-          retryDBConfig: {
-            dbName: 'test-database',
+          persistenceRetry: {
+            statusCodes: [999],
+            idbName: 'test-database',
             attemptLimit: 2,
             maxNumber: 10,
             batchEvictionNumber: 3,
@@ -699,26 +676,21 @@ describe.each([
 
     await page.evaluate(() => {
       window.createBeacon({
-        beaconConfig: {
-          retry: {
-            limit: 1,
-            persist: true,
-            persistRetryStatusCodes: [999],
-            headerName: 'x-retry-context',
-          },
+        inMemoryRetry: {
+          attemptLimit: 1,
+          headerName: 'x-retry-context',
         },
-        retryDBConfig: {
-          dbName: 'test-database',
+        persistenceRetry: {
+          statusCodes: [999],
+          idbName: 'test-database',
           attemptLimit: 1,
           maxNumber: 10,
           batchEvictionNumber: 3,
           throttleWait: 200,
           measureIDB: {
-            create: {
-              createStartMark: 'create-start',
-              createSuccessMeasure: 'create-success-measure',
-              createFailMeasure: 'create-fail-measure',
-            },
+            createStartMark: 'create-start',
+            createSuccessMeasure: 'create-success-measure',
+            createFailMeasure: 'create-fail-measure',
           },
         },
       });
