@@ -112,7 +112,7 @@ export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
  */
 export interface RequestSuccess {
   type: 'success';
-  statusCode: 200;
+  statusCode: number;
 }
 
 /**
