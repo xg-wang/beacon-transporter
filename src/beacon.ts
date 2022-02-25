@@ -2,10 +2,11 @@ import type {
   BeaconFunc,
   BeaconInit,
   IRetryDBBase,
+  RequestNetworkError,
+  RequestResponseError,
+  RequestResult,
   RequiredInMemoryRetryConfig,
   RequiredPersistenceRetryConfig,
-  RetryRejection,
-  RetryRequestResponse,
 } from './interfaces';
 import { fetchFn, isGlobalFetchSupported } from './network';
 import { RetryDB } from './queue';
@@ -42,7 +43,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     this.onClearCallback = () => (this.isClearQueuePending = true);
   }
 
-  send(headers: Record<string, string> = {}): Promise<RetryRequestResponse> {
+  send(headers: Record<string, string> = {}): Promise<RequestResult> {
     this.persistenceConfig.db.onClear(this.onClearCallback);
     const initialRetryCountLeft = this.retryLimit;
     return this.retry(
@@ -71,11 +72,11 @@ class Beacon<RetryDBType extends IRetryDBBase> {
    * @returns result of the retry operation, true if fn ever resolved during retry, false if all retry failed
    */
   private retry(
-    fn: (headers: Record<string, string>) => Promise<RetryRequestResponse>,
+    fn: (fetchHeaders: Record<string, string>) => ReturnType<typeof fetchFn>,
     retryCountLeft: number,
     headers: Record<string, string>,
     errorCode?: number
-  ): Promise<RetryRequestResponse> {
+  ): Promise<RequestResult> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
       createHeaders(headers, this.config.headerName, attemptCount, errorCode)
@@ -110,7 +111,9 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     });
   }
 
-  private isRetryableError(error: RetryRejection): boolean {
+  private isRetryableError(
+    error: RequestNetworkError | RequestResponseError
+  ): boolean {
     if (
       error.type === 'network' ||
       this.config.statusCodes.includes(error.statusCode)
@@ -122,7 +125,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
 
   private shouldPersist(
     retryCountLeft: number,
-    error: RetryRejection
+    error: RequestNetworkError | RequestResponseError
   ): boolean {
     if (this.isClearQueuePending || this.persistenceConfig.disabled) {
       return false;
@@ -174,7 +177,8 @@ export function createBeacon<CustomRetryDB extends IRetryDBBase = IRetryDBBase>(
     {
       attemptLimit: 0,
       statusCodes: defaultInMemoryRetryStatusCodes,
-      calculateRetryDelay: (_retryCountLeft: number, attemptCount: number) => attemptCount * 2000,
+      calculateRetryDelay: (_retryCountLeft: number, attemptCount: number) =>
+        attemptCount * 2000,
     },
     init.inMemoryRetry
   );

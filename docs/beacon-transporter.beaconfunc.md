@@ -8,7 +8,7 @@
 <b>Signature:</b>
 
 ```typescript
-export declare type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
+export declare type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RequestResult>;
 ```
-<b>References:</b> [RetryRejection](./beacon-transporter.retryrejection.md)<!-- -->, [RequestSuccess](./beacon-transporter.requestsuccess.md)
+<b>References:</b> [RequestResult](./beacon-transporter.requestresult.md)
 

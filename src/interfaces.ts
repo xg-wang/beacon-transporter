@@ -89,23 +89,20 @@ export interface IRetryDB extends IRetryDBBase {
 /**
  * @public
  */
-export interface NetworkRetryRejection {
+export interface RequestNetworkError {
   type: 'network';
   statusCode: undefined;
+  rawError: string;
 }
 
 /**
  * @public
  */
-export interface ResponseRetryRejection {
+export interface RequestResponseError {
   type: 'response';
   statusCode: number;
+  rawError: string;
 }
-
-/**
- * @public
- */
-export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
 
 /**
  * @public
@@ -118,7 +115,15 @@ export interface RequestSuccess {
 /**
  * @public
  */
-export type RetryRequestResponse = RequestSuccess | RetryRejection | undefined;
+export interface RequestPersisted {
+  type: 'persisted';
+  statusCode: number;
+}
+
+/**
+ * @public
+ */
+export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | undefined;
 
 /**
  * @public
@@ -127,4 +132,4 @@ export type BeaconFunc = (
   url: string,
   body: string,
   headers?: Record<string, string>
-) => Promise<RetryRejection | RequestSuccess | undefined>;
+) => Promise<RequestResult>;

@@ -15,6 +15,6 @@ export interface RequestSuccess
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [statusCode](./beacon-transporter.requestsuccess.statuscode.md) | 200 |  |
+|  [statusCode](./beacon-transporter.requestsuccess.statuscode.md) | number |  |
 |  [type](./beacon-transporter.requestsuccess.type.md) | 'success' |  |
 

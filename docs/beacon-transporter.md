@@ -29,9 +29,10 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  [BeaconInit](./beacon-transporter.beaconinit.md) |  |
 |  [IRetryDB](./beacon-transporter.iretrydb.md) |  |
 |  [IRetryDBBase](./beacon-transporter.iretrydbbase.md) |  |
-|  [NetworkRetryRejection](./beacon-transporter.networkretryrejection.md) |  |
+|  [RequestNetworkError](./beacon-transporter.requestnetworkerror.md) |  |
+|  [RequestPersisted](./beacon-transporter.requestpersisted.md) |  |
+|  [RequestResponseError](./beacon-transporter.requestresponseerror.md) |  |
 |  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |
-|  [ResponseRetryRejection](./beacon-transporter.responseretryrejection.md) |  |
 |  [RetryEntry](./beacon-transporter.retryentry.md) |  |
 
 ## Variables
@@ -45,6 +46,5 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  Type Alias | Description |
 |  --- | --- |
 |  [BeaconFunc](./beacon-transporter.beaconfunc.md) |  |
-|  [RetryRejection](./beacon-transporter.retryrejection.md) |  |
-|  [RetryRequestResponse](./beacon-transporter.retryrequestresponse.md) |  |
+|  [RequestResult](./beacon-transporter.requestresult.md) |  |
 
