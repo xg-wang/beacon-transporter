@@ -99,7 +99,7 @@ function keepaliveFetch(
       .then(
         (response) => {
           if (response.ok) {
-            resolve({ type: 'success', statusCode: 200 });
+            resolve({ type: 'success', statusCode: response.status});
           } else {
             resolve({
               type: 'response',
