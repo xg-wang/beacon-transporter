@@ -7,7 +7,7 @@
 import { gzipSync } from 'fflate';
 
 // @public (undocumented)
-export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RetryRejection | RequestSuccess | undefined>;
+export type BeaconFunc = (url: string, body: string, headers?: Record<string, string>) => Promise<RequestResult>;
 
 // @public (undocumented)
 export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
@@ -54,10 +54,8 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: Beac
     database: CustomRetryDBType;
 };
 
-// Warning: (ae-forgotten-export) The symbol "fallbackFetch" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
-export const fetchFn: typeof fallbackFetch;
+export const fetchFn: (url: string, body: string, headers: Record<string, string>, compress: boolean) => Promise<Exclude<RequestResult, RequestPersisted>>;
 
 export { gzipSync }
 
@@ -90,7 +88,9 @@ export function isGlobalFetchSupported(): boolean;
 export function isKeepaliveFetchSupported(): boolean;
 
 // @public (undocumented)
-export interface NetworkRetryRejection {
+export interface RequestNetworkError {
+    // (undocumented)
+    rawError: string;
     // (undocumented)
     statusCode: undefined;
     // (undocumented)
@@ -98,9 +98,30 @@ export interface NetworkRetryRejection {
 }
 
 // @public (undocumented)
+export interface RequestPersisted {
+    // (undocumented)
+    statusCode: number;
+    // (undocumented)
+    type: 'persisted';
+}
+
+// @public (undocumented)
+export interface RequestResponseError {
+    // (undocumented)
+    rawError: string;
+    // (undocumented)
+    statusCode: number;
+    // (undocumented)
+    type: 'response';
+}
+
+// @public (undocumented)
+export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | undefined;
+
+// @public (undocumented)
 export interface RequestSuccess {
     // (undocumented)
-    statusCode: 200;
+    statusCode: number;
     // (undocumented)
     type: 'success';
 }
@@ -114,14 +135,6 @@ export type RequiredInMemoryRetryConfig = Required<Pick<NonNullable<BeaconInit['
 //
 // @internal (undocumented)
 export type RequiredPersistenceRetryConfig = Required<Pick<NonNullable<BeaconInit['persistenceRetry']>, 'idbName' | 'attemptLimit' | 'statusCodes' | 'maxNumber' | 'batchEvictionNumber' | 'throttleWait'>> & NonNullable<BeaconInit['persistenceRetry']>;
-
-// @public (undocumented)
-export interface ResponseRetryRejection {
-    // (undocumented)
-    statusCode: number;
-    // (undocumented)
-    type: 'response';
-}
 
 // @public (undocumented)
 export class RetryDB implements IRetryDB {
@@ -160,12 +173,6 @@ export interface RetryEntry {
     // (undocumented)
     url: string;
 }
-
-// @public (undocumented)
-export type RetryRejection = NetworkRetryRejection | ResponseRetryRejection;
-
-// @public (undocumented)
-export type RetryRequestResponse = RequestSuccess | RetryRejection | undefined;
 
 // @public (undocumented)
 export function xhr(url: string, body: string, options?: {

@@ -8,5 +8,5 @@
 <b>Signature:</b>
 
 ```typescript
-fetchFn: typeof fallbackFetch
+fetchFn: (url: string, body: string, headers: Record<string, string>, compress: boolean) => Promise<Exclude<RequestResult, RequestPersisted>>
 ```

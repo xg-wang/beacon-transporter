@@ -1,6 +1,12 @@
 import { gzipSync } from 'fflate';
 
-import type { RequestSuccess, RetryRejection } from './interfaces';
+import type {
+  RequestNetworkError,
+  RequestPersisted,
+  RequestResponseError,
+  RequestResult,
+  RequestSuccess,
+} from './interfaces';
 
 /**
  * @public
@@ -86,7 +92,7 @@ function keepaliveFetch(
   body: string,
   headers: Record<string, string>,
   compress: boolean
-): Promise<RequestSuccess | RetryRejection> {
+): Promise<RequestSuccess | RequestNetworkError | RequestResponseError> {
   return new Promise((resolve) => {
     fetch(url, createRequestInit({ body, keepalive: true, headers, compress }))
       .catch(() => {
@@ -99,17 +105,31 @@ function keepaliveFetch(
       .then(
         (response) => {
           if (response.ok) {
-            resolve({ type: 'success', statusCode: response.status});
+            resolve({ type: 'success', statusCode: response.status });
           } else {
             resolve({
               type: 'response',
               statusCode: response.status,
+              rawError: response.statusText,
             });
           }
         },
-        () => resolve({ type: 'network', statusCode: undefined })
+        (error: unknown) =>
+          resolve({
+            type: 'network',
+            statusCode: undefined,
+            rawError: serializeError(error),
+          })
       );
   });
+}
+
+function serializeError(error: unknown): string {
+  if (error && 'message' in (error as Error)) {
+    return (error as Error).message;
+  } else {
+    return 'UNKNOWN_ERROR';
+  }
 }
 
 const supportSendBeacon =
@@ -120,7 +140,9 @@ function fallbackFetch(
   body: string,
   headers: Record<string, string>,
   compress: boolean
-): Promise<RequestSuccess | RetryRejection | undefined> {
+): Promise<
+  RequestSuccess | RequestResponseError | RequestNetworkError | undefined
+> {
   return new Promise((resolve) => {
     if (supportSendBeacon) {
       let result = false;
@@ -150,10 +172,16 @@ function fallbackFetch(
           resolve({
             type: 'response',
             statusCode: response.status,
+            rawError: response.statusText,
           });
         }
       },
-      () => resolve({ type: 'network', statusCode: undefined })
+      (error: unknown) =>
+        resolve({
+          type: 'network',
+          statusCode: undefined,
+          rawError: serializeError(error),
+        })
     );
   });
 }
@@ -161,6 +189,10 @@ function fallbackFetch(
 /**
  * @public
  */
-export const fetchFn = isKeepaliveFetchSupported()
-  ? keepaliveFetch
-  : fallbackFetch;
+export const fetchFn: (
+  url: string,
+  body: string,
+  headers: Record<string, string>,
+  compress: boolean
+) => Promise<Exclude<RequestResult, RequestPersisted>> =
+  isKeepaliveFetchSupported() ? keepaliveFetch : fallbackFetch;

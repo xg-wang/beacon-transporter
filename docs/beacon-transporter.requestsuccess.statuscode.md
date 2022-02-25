@@ -7,5 +7,5 @@
 <b>Signature:</b>
 
 ```typescript
-statusCode: 200;
+statusCode: number;
 ```
