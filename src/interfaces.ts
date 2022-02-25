@@ -117,7 +117,7 @@ export interface RequestSuccess {
  */
 export interface RequestPersisted {
   type: 'persisted';
-  statusCode: number;
+  statusCode: number | undefined;
 }
 
 /**

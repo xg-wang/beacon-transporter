@@ -129,7 +129,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         expect(result).toBeUndefined();
       } else {
         expect(result).toEqual({
-          type: 'response',
+          type: 'persisted',
           statusCode: 429,
         });
       }
@@ -148,7 +148,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         expect(networkResult).toBeUndefined();
       } else {
         expect(networkResult).toEqual({
-          type: 'network',
+          type: 'persisted',
         });
       }
     });
@@ -310,7 +310,8 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
             inMemoryRetry: {
               attemptLimit: 2,
               statusCodes: [502],
-              calculateRetryDelay: (attemptCount) => (attemptCount === 1 ? 1 : 2000),
+              calculateRetryDelay: (attemptCount) =>
+                attemptCount === 1 ? 1 : 2000,
             },
           });
           beacon(`${url}/api/retry`, 'hi');
@@ -339,7 +340,7 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         ([url]) => {
           const { beacon } = window.createBeacon({
             inMemoryRetry: {
-              attemptLimit: 0
+              attemptLimit: 0,
             },
             compress: true,
           });

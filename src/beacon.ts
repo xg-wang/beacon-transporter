@@ -85,6 +85,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
         if (!this.isClearQueuePending && !this.persistenceConfig.disabled) {
           this.persistenceConfig.db.notifyQueue();
         }
+        return maybeError;
       } else {
         debug(() => 'retry rejected ' + JSON.stringify(maybeError));
         if (this.shouldPersist(retryCountLeft, maybeError)) {
@@ -96,6 +97,10 @@ class Beacon<RetryDBType extends IRetryDBBase> {
             timestamp: this.timestamp,
             attemptCount: this.getAttemptCount(retryCountLeft),
           });
+          return {
+            type: 'persisted',
+            statusCode: maybeError.statusCode,
+          };
         } else if (retryCountLeft > 0 && this.isRetryableError(maybeError)) {
           const waitMs = this.config.calculateRetryDelay(
             this.getAttemptCount(retryCountLeft),
@@ -107,7 +112,6 @@ class Beacon<RetryDBType extends IRetryDBBase> {
           );
         }
       }
-      return maybeError;
     });
   }
 
