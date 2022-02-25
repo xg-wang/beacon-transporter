@@ -100,7 +100,7 @@ export interface RequestNetworkError {
 // @public (undocumented)
 export interface RequestPersisted {
     // (undocumented)
-    statusCode: number;
+    statusCode: number | undefined;
     // (undocumented)
     type: 'persisted';
 }
