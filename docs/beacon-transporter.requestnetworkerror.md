@@ -16,6 +16,6 @@ export interface RequestNetworkError
 |  Property | Type | Description |
 |  --- | --- | --- |
 |  [rawError](./beacon-transporter.requestnetworkerror.rawerror.md) | string |  |
-|  [statusCode](./beacon-transporter.requestnetworkerror.statuscode.md) | undefined |  |
+|  [statusCode?](./beacon-transporter.requestnetworkerror.statuscode.md) | undefined | <i>(Optional)</i> |
 |  [type](./beacon-transporter.requestnetworkerror.type.md) | 'network' |  |
 

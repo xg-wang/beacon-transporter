@@ -32,6 +32,7 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  [RequestNetworkError](./beacon-transporter.requestnetworkerror.md) |  |
 |  [RequestPersisted](./beacon-transporter.requestpersisted.md) |  |
 |  [RequestResponseError](./beacon-transporter.requestresponseerror.md) |  |
+|  [RequestResponseUnknown](./beacon-transporter.requestresponseunknown.md) |  |
 |  [RequestSuccess](./beacon-transporter.requestsuccess.md) |  |
 |  [RetryEntry](./beacon-transporter.retryentry.md) |  |
 

@@ -81,7 +81,10 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     return fn(
       createHeaders(headers, this.config.headerName, attemptCount, errorCode)
     ).then((maybeError) => {
-      if (typeof maybeError === 'undefined' || maybeError.type === 'success') {
+      if (
+        maybeError.type === 'unknown' ||
+        maybeError.type === 'success'
+      ) {
         if (!this.isClearQueuePending && !this.persistenceConfig.disabled) {
           this.persistenceConfig.db.notifyQueue();
         }
@@ -112,6 +115,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
           );
         }
       }
+      return maybeError;
     });
   }
 
@@ -211,7 +215,7 @@ export function createBeacon<CustomRetryDB extends IRetryDBBase = IRetryDBBase>(
 
   const beacon: BeaconFunc = (url, body, headers) => {
     if (!isGlobalFetchSupported()) {
-      return Promise.resolve(undefined);
+      return Promise.resolve({ type: 'unknown' });
     }
     return new Beacon(
       url,

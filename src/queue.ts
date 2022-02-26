@@ -156,7 +156,10 @@ class Queue implements IQueue {
               ),
               this.compress
             ).then((maybeError) => {
-              if (!maybeError || maybeError.type === 'success') {
+              if (
+                maybeError.type === 'unknown' ||
+                maybeError.type === 'success'
+              ) {
                 this.replayEntries();
               } else {
                 if (attemptCount + 1 > this.config.attemptLimit) {
