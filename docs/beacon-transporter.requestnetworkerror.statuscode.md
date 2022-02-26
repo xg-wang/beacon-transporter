@@ -7,5 +7,5 @@
 <b>Signature:</b>
 
 ```typescript
-statusCode: undefined;
+statusCode?: undefined;
 ```

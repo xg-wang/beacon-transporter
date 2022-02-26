@@ -15,6 +15,6 @@ export interface RequestPersisted
 
 |  Property | Type | Description |
 |  --- | --- | --- |
-|  [statusCode](./beacon-transporter.requestpersisted.statuscode.md) | number \| undefined |  |
+|  [statusCode?](./beacon-transporter.requestpersisted.statuscode.md) | number | <i>(Optional)</i> |
 |  [type](./beacon-transporter.requestpersisted.type.md) | 'persisted' |  |
 

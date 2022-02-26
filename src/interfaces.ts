@@ -91,7 +91,7 @@ export interface IRetryDB extends IRetryDBBase {
  */
 export interface RequestNetworkError {
   type: 'network';
-  statusCode: undefined;
+  statusCode?: undefined;
   rawError: string;
 }
 
@@ -117,13 +117,21 @@ export interface RequestSuccess {
  */
 export interface RequestPersisted {
   type: 'persisted';
-  statusCode: number | undefined;
+  statusCode?: number;
+}
+
+/**
+  * @public
+  */
+export interface RequestResponseUnknown {
+  type: 'unknown';
+  statusCode?: undefined;
 }
 
 /**
  * @public
  */
-export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | undefined;
+export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | RequestResponseUnknown;
 
 /**
  * @public

@@ -8,7 +8,7 @@
 <b>Signature:</b>
 
 ```typescript
-export declare type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | undefined;
+export declare type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | RequestResponseUnknown;
 ```
-<b>References:</b> [RequestSuccess](./beacon-transporter.requestsuccess.md)<!-- -->, [RequestPersisted](./beacon-transporter.requestpersisted.md)<!-- -->, [RequestNetworkError](./beacon-transporter.requestnetworkerror.md)<!-- -->, [RequestResponseError](./beacon-transporter.requestresponseerror.md)
+<b>References:</b> [RequestSuccess](./beacon-transporter.requestsuccess.md)<!-- -->, [RequestPersisted](./beacon-transporter.requestpersisted.md)<!-- -->, [RequestNetworkError](./beacon-transporter.requestnetworkerror.md)<!-- -->, [RequestResponseError](./beacon-transporter.requestresponseerror.md)<!-- -->, [RequestResponseUnknown](./beacon-transporter.requestresponseunknown.md)
 

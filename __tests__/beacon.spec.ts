@@ -103,7 +103,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         return beacon(`${url}/api`, 'hello');
       }, server.url);
       if (name === 'firefox') {
-        expect(result).toBeUndefined();
+        expect(result).toEqual({
+          type: 'unknown'
+        });
       } else {
         expect(result).toEqual({
           type: 'success',
@@ -126,7 +128,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         return beacon(`${url}/api`, 'hello');
       }, server.url);
       if (name === 'firefox') {
-        expect(result).toBeUndefined();
+        expect(result).toEqual({
+          type: 'unknown'
+        });
       } else {
         expect(result).toEqual({
           type: 'persisted',
@@ -145,7 +149,9 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
         return beacon(`${url}/api`, 'hello');
       }, server.url);
       if (name === 'firefox') {
-        expect(networkResult).toBeUndefined();
+        expect(result).toEqual({
+          type: 'unknown'
+        });
       } else {
         expect(networkResult).toEqual({
           type: 'persisted',

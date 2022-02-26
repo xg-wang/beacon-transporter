@@ -4,6 +4,7 @@ import type {
   RequestNetworkError,
   RequestPersisted,
   RequestResponseError,
+  RequestResponseUnknown,
   RequestResult,
   RequestSuccess,
 } from './interfaces';
@@ -117,7 +118,6 @@ function keepaliveFetch(
         (error: unknown) =>
           resolve({
             type: 'network',
-            statusCode: undefined,
             rawError: serializeError(error),
           })
       );
@@ -141,7 +141,10 @@ function fallbackFetch(
   headers: Record<string, string>,
   compress: boolean
 ): Promise<
-  RequestSuccess | RequestResponseError | RequestNetworkError | undefined
+  | RequestSuccess
+  | RequestResponseError
+  | RequestNetworkError
+  | RequestResponseUnknown
 > {
   return new Promise((resolve) => {
     if (supportSendBeacon) {
@@ -154,7 +157,9 @@ function fallbackFetch(
       // if the user agent is not able to successfully queue the data for transfer,
       // send the payload with fetch api instead
       if (result) {
-        resolve(undefined);
+        resolve({
+          type: 'unknown',
+        });
         return;
       }
     }
@@ -179,7 +184,6 @@ function fallbackFetch(
       (error: unknown) =>
         resolve({
           type: 'network',
-          statusCode: undefined,
           rawError: serializeError(error),
         })
     );

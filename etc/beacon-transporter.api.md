@@ -92,7 +92,7 @@ export interface RequestNetworkError {
     // (undocumented)
     rawError: string;
     // (undocumented)
-    statusCode: undefined;
+    statusCode?: undefined;
     // (undocumented)
     type: 'network';
 }
@@ -100,7 +100,7 @@ export interface RequestNetworkError {
 // @public (undocumented)
 export interface RequestPersisted {
     // (undocumented)
-    statusCode: number | undefined;
+    statusCode?: number;
     // (undocumented)
     type: 'persisted';
 }
@@ -116,7 +116,15 @@ export interface RequestResponseError {
 }
 
 // @public (undocumented)
-export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | undefined;
+export interface RequestResponseUnknown {
+    // (undocumented)
+    statusCode?: undefined;
+    // (undocumented)
+    type: 'unknown';
+}
+
+// @public (undocumented)
+export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkError | RequestResponseError | RequestResponseUnknown;
 
 // @public (undocumented)
 export interface RequestSuccess {
