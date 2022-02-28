@@ -15,6 +15,7 @@ export interface RequestResponseUnknown
 
 |  Property | Type | Description |
 |  --- | --- | --- |
+|  [drop](./beacon-transporter.requestresponseunknown.drop.md) | boolean |  |
 |  [statusCode?](./beacon-transporter.requestresponseunknown.statuscode.md) | undefined | <i>(Optional)</i> |
 |  [type](./beacon-transporter.requestresponseunknown.type.md) | 'unknown' |  |
 

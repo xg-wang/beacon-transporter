@@ -21,6 +21,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
         statusCodes?: number[];
         headerName?: string;
         calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
+        onIntermediateResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
     };
     // (undocumented)
     persistenceRetry?: {
@@ -37,6 +38,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
             createSuccessMeasure: string;
             createFailMeasure: string;
         };
+        onResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
     };
     // (undocumented)
     retryDB?: CustomRetryDB;
@@ -55,7 +57,10 @@ export function createBeacon<CustomRetryDBType extends IRetryDBBase>(init?: Beac
 };
 
 // @public (undocumented)
-export const fetchFn: (url: string, body: string, headers: Record<string, string>, compress: boolean) => Promise<Exclude<RequestResult, RequestPersisted>>;
+export type FetchFn = (url: string, body: string, headers: Record<string, string>, compress: boolean) => Promise<Exclude<RequestResult, RequestPersisted>>;
+
+// @public (undocumented)
+export const fetchFn: FetchFn;
 
 export { gzipSync }
 
@@ -90,6 +95,8 @@ export function isKeepaliveFetchSupported(): boolean;
 // @public (undocumented)
 export interface RequestNetworkError {
     // (undocumented)
+    drop: boolean;
+    // (undocumented)
     rawError: string;
     // (undocumented)
     statusCode?: undefined;
@@ -100,6 +107,8 @@ export interface RequestNetworkError {
 // @public (undocumented)
 export interface RequestPersisted {
     // (undocumented)
+    drop: false;
+    // (undocumented)
     statusCode?: number;
     // (undocumented)
     type: 'persisted';
@@ -107,6 +116,8 @@ export interface RequestPersisted {
 
 // @public (undocumented)
 export interface RequestResponseError {
+    // (undocumented)
+    drop: boolean;
     // (undocumented)
     rawError: string;
     // (undocumented)
@@ -118,6 +129,8 @@ export interface RequestResponseError {
 // @public (undocumented)
 export interface RequestResponseUnknown {
     // (undocumented)
+    drop: boolean;
+    // (undocumented)
     statusCode?: undefined;
     // (undocumented)
     type: 'unknown';
@@ -128,6 +141,8 @@ export type RequestResult = RequestSuccess | RequestPersisted | RequestNetworkEr
 
 // @public (undocumented)
 export interface RequestSuccess {
+    // (undocumented)
+    drop: false;
     // (undocumented)
     statusCode: number;
     // (undocumented)

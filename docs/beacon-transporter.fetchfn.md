@@ -8,5 +8,5 @@
 <b>Signature:</b>
 
 ```typescript
-fetchFn: (url: string, body: string, headers: Record<string, string>, compress: boolean) => Promise<Exclude<RequestResult, RequestPersisted>>
+fetchFn: FetchFn
 ```

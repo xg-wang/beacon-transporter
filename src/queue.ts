@@ -155,10 +155,10 @@ class Queue implements IQueue {
                 statusCode
               ),
               this.compress
-            ).then((maybeError) => {
+            ).then((fetchResult) => {
               if (
-                maybeError.type === 'unknown' ||
-                maybeError.type === 'success'
+                fetchResult.type === 'unknown' ||
+                fetchResult.type === 'success'
               ) {
                 this.replayEntries();
               } else {
@@ -176,11 +176,12 @@ class Queue implements IQueue {
                         2
                       )
                   );
+                  // fetchResult.drop = true;
                   return;
                 }
                 if (
-                  maybeError.type === 'network' ||
-                  this.config.statusCodes.includes(maybeError.statusCode)
+                  fetchResult.type === 'network' ||
+                  this.config.statusCodes.includes(fetchResult.statusCode)
                 ) {
                   debug(
                     () =>
@@ -206,6 +207,8 @@ class Queue implements IQueue {
                     this.config,
                     this.withStore
                   );
+                } else {
+                  // fetchResult.drop = true;
                 }
               }
             });

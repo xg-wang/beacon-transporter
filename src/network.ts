@@ -106,10 +106,15 @@ function keepaliveFetch(
       .then(
         (response) => {
           if (response.ok) {
-            resolve({ type: 'success', statusCode: response.status });
+            resolve({
+              type: 'success',
+              drop: false,
+              statusCode: response.status,
+            });
           } else {
             resolve({
               type: 'response',
+              drop: false, // not yet dropped, possible to be re-written
               statusCode: response.status,
               rawError: response.statusText,
             });
@@ -118,6 +123,7 @@ function keepaliveFetch(
         (error: unknown) =>
           resolve({
             type: 'network',
+            drop: false, // not yet dropped, possible to be re-written
             rawError: serializeError(error),
           })
       );
@@ -159,6 +165,7 @@ function fallbackFetch(
       if (result) {
         resolve({
           type: 'unknown',
+          drop: false,
         });
         return;
       }
@@ -171,11 +178,13 @@ function fallbackFetch(
         if (response.ok) {
           resolve({
             type: 'success',
+            drop: false,
             statusCode: 200,
           });
         } else {
           resolve({
             type: 'response',
+            drop: false, // not yet dropped, possible to be re-written
             statusCode: response.status,
             rawError: response.statusText,
           });
@@ -184,6 +193,7 @@ function fallbackFetch(
       (error: unknown) =>
         resolve({
           type: 'network',
+          drop: false, // not yet dropped, possible to be re-written
           rawError: serializeError(error),
         })
     );
@@ -193,10 +203,16 @@ function fallbackFetch(
 /**
  * @public
  */
-export const fetchFn: (
+export type FetchFn = (
   url: string,
   body: string,
   headers: Record<string, string>,
   compress: boolean
-) => Promise<Exclude<RequestResult, RequestPersisted>> =
-  isKeepaliveFetchSupported() ? keepaliveFetch : fallbackFetch;
+) => Promise<Exclude<RequestResult, RequestPersisted>>;
+
+/**
+ * @public
+ */
+export const fetchFn: FetchFn = isKeepaliveFetchSupported()
+  ? keepaliveFetch
+  : fallbackFetch;

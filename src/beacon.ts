@@ -3,6 +3,7 @@ import type {
   BeaconInit,
   IRetryDBBase,
   RequestNetworkError,
+  RequestPersisted,
   RequestResponseError,
   RequestResult,
   RequiredInMemoryRetryConfig,
@@ -80,42 +81,42 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     const attemptCount = this.getAttemptCount(retryCountLeft) - 1;
     return fn(
       createHeaders(headers, this.config.headerName, attemptCount, errorCode)
-    ).then((maybeError) => {
-      if (
-        maybeError.type === 'unknown' ||
-        maybeError.type === 'success'
-      ) {
+    ).then((fetchResult) => {
+      if (fetchResult.type === 'unknown' || fetchResult.type === 'success') {
         if (!this.isClearQueuePending && !this.persistenceConfig.disabled) {
           this.persistenceConfig.db.notifyQueue();
         }
-        return maybeError;
+        return fetchResult;
       } else {
-        debug(() => 'retry rejected ' + JSON.stringify(maybeError));
-        if (this.shouldPersist(retryCountLeft, maybeError)) {
+        debug(() => 'retry rejected ' + JSON.stringify(fetchResult));
+        if (this.shouldPersist(retryCountLeft, fetchResult)) {
           this.persistenceConfig.db.pushToQueue({
             url: this.url,
             body: this.body,
             headers,
-            statusCode: maybeError.statusCode,
+            statusCode: fetchResult.statusCode,
             timestamp: this.timestamp,
             attemptCount: this.getAttemptCount(retryCountLeft),
           });
-          return {
+          const persistedResult: RequestPersisted = {
             type: 'persisted',
-            statusCode: maybeError.statusCode,
+            drop: false,
+            statusCode: fetchResult.statusCode,
           };
-        } else if (retryCountLeft > 0 && this.isRetryableError(maybeError)) {
+          return persistedResult;
+        } else if (retryCountLeft > 0 && this.isRetryableError(fetchResult)) {
           const waitMs = this.config.calculateRetryDelay(
             this.getAttemptCount(retryCountLeft),
             retryCountLeft
           );
           debug(() => `in memory retry in ${waitMs}ms`);
           return sleep(waitMs).then(() =>
-            this.retry(fn, retryCountLeft - 1, headers, maybeError.statusCode)
+            this.retry(fn, retryCountLeft - 1, headers, fetchResult.statusCode)
           );
         }
       }
-      return maybeError;
+      fetchResult.drop = true;
+      return fetchResult;
     });
   }
 
@@ -215,7 +216,7 @@ export function createBeacon<CustomRetryDB extends IRetryDBBase = IRetryDBBase>(
 
   const beacon: BeaconFunc = (url, body, headers) => {
     if (!isGlobalFetchSupported()) {
-      return Promise.resolve({ type: 'unknown' });
+      return Promise.resolve({ type: 'unknown', drop: true });
     }
     return new Beacon(
       url,

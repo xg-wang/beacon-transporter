@@ -104,11 +104,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       }, server.url);
       if (name === 'firefox') {
         expect(result).toEqual({
-          type: 'unknown'
+          type: 'unknown',
+          drop: false,
         });
       } else {
         expect(result).toEqual({
           type: 'success',
+          drop: false,
           statusCode: 200,
         });
       }
@@ -129,11 +131,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       }, server.url);
       if (name === 'firefox') {
         expect(result).toEqual({
-          type: 'unknown'
+          type: 'unknown',
+          drop: false,
         });
       } else {
         expect(result).toEqual({
           type: 'persisted',
+          drop: false,
           statusCode: 429,
         });
       }
@@ -150,11 +154,13 @@ describe.each(['chromium', 'webkit', 'firefox'].map((t) => [t]))(
       }, server.url);
       if (name === 'firefox') {
         expect(result).toEqual({
-          type: 'unknown'
+          type: 'unknown',
+          drop: false,
         });
       } else {
         expect(networkResult).toEqual({
           type: 'persisted',
+          drop: false,
         });
       }
     });
