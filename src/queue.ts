@@ -160,6 +160,7 @@ class Queue implements IQueue {
                 fetchResult.type === 'unknown' ||
                 fetchResult.type === 'success'
               ) {
+                this.config.onResult?.(fetchResult);
                 this.replayEntries();
               } else {
                 if (attemptCount + 1 > this.config.attemptLimit) {
@@ -176,13 +177,15 @@ class Queue implements IQueue {
                         2
                       )
                   );
-                  // fetchResult.drop = true;
+                  fetchResult.drop = true;
+                  this.config.onResult?.(fetchResult, body);
                   return;
                 }
                 if (
                   fetchResult.type === 'network' ||
                   this.config.statusCodes.includes(fetchResult.statusCode)
                 ) {
+                  this.config.onResult?.(fetchResult);
                   debug(
                     () =>
                       'Replaying the entry failed, pushing back to IDB: ' +
@@ -208,7 +211,8 @@ class Queue implements IQueue {
                     this.withStore
                   );
                 } else {
-                  // fetchResult.drop = true;
+                  fetchResult.drop = true;
+                  this.config.onResult?.(fetchResult, body);
                 }
               }
             });

@@ -1,5 +1,3 @@
-import type { FetchFn } from './network';
-
 /**
  * @public
  */
@@ -10,7 +8,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
     statusCodes?: number[];
     headerName?: string;
     calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
-    onIntermediateResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
+    onIntermediateResult?: (result: RequestResult) => void;
   };
   disablePersistenceRetry?: boolean;
   persistenceRetry?: {
@@ -27,7 +25,8 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
       createSuccessMeasure: string;
       createFailMeasure: string;
     };
-    onResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
+    // include payload if dropped
+    onResult?: (result: RequestResult, rawPayload?: string) => void;
   };
   retryDB?: CustomRetryDB;
 }

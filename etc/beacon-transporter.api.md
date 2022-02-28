@@ -21,7 +21,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
         statusCodes?: number[];
         headerName?: string;
         calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
-        onIntermediateResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
+        onIntermediateResult?: (result: RequestResult) => void;
     };
     // (undocumented)
     persistenceRetry?: {
@@ -38,7 +38,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
             createSuccessMeasure: string;
             createFailMeasure: string;
         };
-        onResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
+        onResult?: (result: RequestResult, rawPayload?: string) => void;
     };
     // (undocumented)
     retryDB?: CustomRetryDB;

@@ -21,6 +21,6 @@ persistenceRetry?: {
             createSuccessMeasure: string;
             createFailMeasure: string;
         };
-        onResult?: (result: Awaited<ReturnType<FetchFn>>) => void;
+        onResult?: (result: RequestResult, rawPayload?: string) => void;
     };
 ```

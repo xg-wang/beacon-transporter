@@ -82,11 +82,12 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     return fn(
       createHeaders(headers, this.config.headerName, attemptCount, errorCode)
     ).then((fetchResult) => {
+      let result: RequestResult;
       if (fetchResult.type === 'unknown' || fetchResult.type === 'success') {
         if (!this.isClearQueuePending && !this.persistenceConfig.disabled) {
           this.persistenceConfig.db.notifyQueue();
         }
-        return fetchResult;
+        result = fetchResult;
       } else {
         debug(() => 'retry rejected ' + JSON.stringify(fetchResult));
         if (this.shouldPersist(retryCountLeft, fetchResult)) {
@@ -98,13 +99,13 @@ class Beacon<RetryDBType extends IRetryDBBase> {
             timestamp: this.timestamp,
             attemptCount: this.getAttemptCount(retryCountLeft),
           });
-          const persistedResult: RequestPersisted = {
+          result = {
             type: 'persisted',
             drop: false,
             statusCode: fetchResult.statusCode,
           };
-          return persistedResult;
         } else if (retryCountLeft > 0 && this.isRetryableError(fetchResult)) {
+          this.config.onIntermediateResult?.(fetchResult);
           const waitMs = this.config.calculateRetryDelay(
             this.getAttemptCount(retryCountLeft),
             retryCountLeft
@@ -113,10 +114,13 @@ class Beacon<RetryDBType extends IRetryDBBase> {
           return sleep(waitMs).then(() =>
             this.retry(fn, retryCountLeft - 1, headers, fetchResult.statusCode)
           );
+        } else {
+          result = fetchResult;
+          result.drop = true;
         }
       }
-      fetchResult.drop = true;
-      return fetchResult;
+      this.config.onIntermediateResult?.(result);
+      return result;
     });
   }
 
