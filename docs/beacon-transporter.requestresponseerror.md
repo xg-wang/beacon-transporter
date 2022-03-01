@@ -15,6 +15,7 @@ export interface RequestResponseError
 
 |  Property | Type | Description |
 |  --- | --- | --- |
+|  [drop](./beacon-transporter.requestresponseerror.drop.md) | boolean |  |
 |  [rawError](./beacon-transporter.requestresponseerror.rawerror.md) | string |  |
 |  [statusCode](./beacon-transporter.requestresponseerror.statuscode.md) | number |  |
 |  [type](./beacon-transporter.requestresponseerror.type.md) | 'response' |  |

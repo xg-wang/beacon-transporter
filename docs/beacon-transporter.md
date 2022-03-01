@@ -47,5 +47,6 @@ Transporting data to the server made easy. Support persistent retry and gzip com
 |  Type Alias | Description |
 |  --- | --- |
 |  [BeaconFunc](./beacon-transporter.beaconfunc.md) |  |
+|  [FetchFn](./beacon-transporter.fetchfn.md) |  |
 |  [RequestResult](./beacon-transporter.requestresult.md) |  |
 

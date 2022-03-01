@@ -8,6 +8,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
     statusCodes?: number[];
     headerName?: string;
     calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
+    onIntermediateResult?: (result: RequestResult, rawPayload: string) => void;
   };
   disablePersistenceRetry?: boolean;
   persistenceRetry?: {
@@ -24,6 +25,8 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
       createSuccessMeasure: string;
       createFailMeasure: string;
     };
+    onBeforeRetry?: (rawPayload: string) => void;
+    onResult?: (result: RequestResult, rawPayload: string) => void;
   };
   retryDB?: CustomRetryDB;
 }
@@ -91,6 +94,7 @@ export interface IRetryDB extends IRetryDBBase {
  */
 export interface RequestNetworkError {
   type: 'network';
+  drop: boolean;
   statusCode?: undefined;
   rawError: string;
 }
@@ -100,6 +104,7 @@ export interface RequestNetworkError {
  */
 export interface RequestResponseError {
   type: 'response';
+  drop: boolean;
   statusCode: number;
   rawError: string;
 }
@@ -109,6 +114,7 @@ export interface RequestResponseError {
  */
 export interface RequestSuccess {
   type: 'success';
+  drop: false;
   statusCode: number;
 }
 
@@ -117,6 +123,7 @@ export interface RequestSuccess {
  */
 export interface RequestPersisted {
   type: 'persisted';
+  drop: false;
   statusCode?: number;
 }
 
@@ -125,6 +132,7 @@ export interface RequestPersisted {
   */
 export interface RequestResponseUnknown {
   type: 'unknown';
+  drop: boolean;
   statusCode?: undefined;
 }
 
