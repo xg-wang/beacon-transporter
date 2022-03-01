@@ -8,7 +8,7 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
     statusCodes?: number[];
     headerName?: string;
     calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
-    onIntermediateResult?: (result: RequestResult) => void;
+    onIntermediateResult?: (result: RequestResult, rawPayload: string) => void;
   };
   disablePersistenceRetry?: boolean;
   persistenceRetry?: {
@@ -25,8 +25,8 @@ export interface BeaconInit<CustomRetryDB = IRetryDBBase> {
       createSuccessMeasure: string;
       createFailMeasure: string;
     };
-    // include payload if dropped
-    onResult?: (result: RequestResult, rawPayload?: string) => void;
+    onBeforeRetry?: (rawPayload: string) => void;
+    onResult?: (result: RequestResult, rawPayload: string) => void;
   };
   retryDB?: CustomRetryDB;
 }

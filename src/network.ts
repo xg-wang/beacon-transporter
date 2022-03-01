@@ -114,7 +114,7 @@ function keepaliveFetch(
           } else {
             resolve({
               type: 'response',
-              drop: false, // not yet dropped, possible to be re-written
+              drop: true,
               statusCode: response.status,
               rawError: response.statusText,
             });
@@ -123,7 +123,7 @@ function keepaliveFetch(
         (error: unknown) =>
           resolve({
             type: 'network',
-            drop: false, // not yet dropped, possible to be re-written
+            drop: true,
             rawError: serializeError(error),
           })
       );
@@ -184,7 +184,7 @@ function fallbackFetch(
         } else {
           resolve({
             type: 'response',
-            drop: false, // not yet dropped, possible to be re-written
+            drop: true,
             statusCode: response.status,
             rawError: response.statusText,
           });
@@ -193,7 +193,7 @@ function fallbackFetch(
       (error: unknown) =>
         resolve({
           type: 'network',
-          drop: false, // not yet dropped, possible to be re-written
+          drop: true,
           rawError: serializeError(error),
         })
     );

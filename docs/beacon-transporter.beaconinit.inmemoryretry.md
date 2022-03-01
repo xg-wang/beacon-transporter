@@ -12,6 +12,6 @@ inMemoryRetry?: {
         statusCodes?: number[];
         headerName?: string;
         calculateRetryDelay?: (attempCount: number, countLeft: number) => number;
-        onIntermediateResult?: (result: RequestResult) => void;
+        onIntermediateResult?: (result: RequestResult, rawPayload: string) => void;
     };
 ```

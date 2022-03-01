@@ -145,6 +145,7 @@ class Queue implements IQueue {
                   this.config.headerName
                 )}; attemptCount: ${attemptCount}`
             );
+            this.config.onBeforeRetry?.(body);
             return fetchFn(
               url,
               body,
@@ -160,7 +161,7 @@ class Queue implements IQueue {
                 fetchResult.type === 'unknown' ||
                 fetchResult.type === 'success'
               ) {
-                this.config.onResult?.(fetchResult);
+                this.config.onResult?.(fetchResult, body);
                 this.replayEntries();
               } else {
                 if (attemptCount + 1 > this.config.attemptLimit) {
@@ -185,7 +186,7 @@ class Queue implements IQueue {
                   fetchResult.type === 'network' ||
                   this.config.statusCodes.includes(fetchResult.statusCode)
                 ) {
-                  this.config.onResult?.(fetchResult);
+                  this.config.onResult?.(fetchResult, body);
                   debug(
                     () =>
                       'Replaying the entry failed, pushing back to IDB: ' +

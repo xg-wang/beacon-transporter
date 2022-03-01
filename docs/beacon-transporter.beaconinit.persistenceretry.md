@@ -21,6 +21,7 @@ persistenceRetry?: {
             createSuccessMeasure: string;
             createFailMeasure: string;
         };
-        onResult?: (result: RequestResult, rawPayload?: string) => void;
+        onBeforeRetry?: (rawPayload: string) => void;
+        onResult?: (result: RequestResult, rawPayload: string) => void;
     };
 ```
