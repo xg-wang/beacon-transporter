@@ -186,6 +186,7 @@ class Queue implements IQueue {
                   fetchResult.type === 'network' ||
                   this.config.statusCodes.includes(fetchResult.statusCode)
                 ) {
+                  fetchResult.drop = false;
                   this.config.onResult?.(fetchResult, body);
                   debug(
                     () =>
