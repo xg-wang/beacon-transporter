@@ -153,7 +153,7 @@ class Beacon<RetryDBType extends IRetryDBBase> {
     }
     const fromStatusCode =
       error.type === 'response' &&
-      this.persistenceConfig.statusCodes.includes(error.statusCode);
+      error.statusCode > 400;
     if (fromStatusCode) {
       return true;
     }
